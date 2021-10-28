@@ -30,7 +30,7 @@ function connectToDb() {
       const uri = `mongodb+srv://ZeusBastard:${process.env.MONGO_PASS}@cluster0.ruyuw.mongodb.net/olympus?retryWrites=true&w=majority`;
       const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
       client.connect(err => {
-         if (err) return resolve({ err: err, db: null });
+         if (err) return resolve({ err, db: null });
          resolve({ err: null, db: client.db("olympus") });
       });
    });
@@ -48,18 +48,18 @@ async function generateUniqueID(db) {
 
 function generateNicknameTag(db, nickname) {
    return new Promise(resolve => {
-      db.collection('accounts').find({ nickname: nickname }).toArray(async (err, res) => {
+      db.collection('accounts').find({ nickname }).toArray(async (err, res) => {
          if (err) {
-            return resolve({ success: false, err: err, reason: 'db' });
+            return resolve({ success: false, err, reason: 'db' });
          }
          if (res.length > 8000) {
-            return resolve({ success: false, err: err, reason: 'limit reached' });
+            return resolve({ success: false, err, reason: 'limit reached' });
          }
          while (true) {
             const tag = rand(1, 9999);
-            const exists = await db.collection('accounts').findOne({ tag: tag, nickname: nickname });
+            const exists = await db.collection('accounts').findOne({ tag, nickname });
             if (!exists) {
-               return resolve({ success: true, tag: tag });
+               return resolve({ success: true, tag });
             }
          }
       });
