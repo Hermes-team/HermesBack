@@ -68,8 +68,9 @@ function generateNicknameTag(db, nickname) {
 
 (async () => {
    const { err, db } = await connectToDb();
-
    if (err) throw err;
+
+   console.log('Connected to the database')
 
    const limiter = rateLimit({
       windowMs: 60 * 1000 * 1, // 1 minute
@@ -148,7 +149,7 @@ function generateNicknameTag(db, nickname) {
             token: null,
             tokenTimestamp: null
          };
-         const { err, result } = await db.collection('accounts').insertOne(newUser);
+         const { err } = await db.collection('accounts').insertOne(newUser);
          if (err) {
             console.log(err);
             return res.json({ success: false, msg: 'database error' });
