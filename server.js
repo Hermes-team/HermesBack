@@ -38,13 +38,13 @@ function connectToDb() {
 }
 
 function findUser(db, nickname, tag) {
+   //! DODAC OBSLUGE BLEDU JESLI NIE MA UZYTKOWNIKA O DANYM TA 
    return new Promise(resolve => {
-      db.collection('accounts').findOne({ nickname: `${nickname}`, tag: parseInt(tag) }, (err, result) => {
+      db.collection('accounts').findOne({ nickname: `${nickname}`, tag: tag }, (err, result) => {
          if (err) {
             console.log("User not found");
             return resolve(null);
          }
-         console.log("User found");
          return resolve(result._id);
       })
    });
@@ -53,9 +53,12 @@ function findUser(db, nickname, tag) {
 function addUser(db, userRequesting, userGettingRequest) {
    return new Promise(resolve => {
       const a = db.collection('accounts').updateOne({ "_id": ObjectId(userGettingRequest) }, {
-         $set: { "pendingRequests": `${userRequesting}` }
-      })
-      return resolve(a);
+         $push: { pendingRequests: [`${userRequesting}`] } } 
+      )
+      if (a && a.n > 0) {
+         return resolve(a);
+      }
+      return resolve({ success: false, reason: 'could not update friends pending request list' });
    })
 };
 
@@ -253,10 +256,10 @@ function generateNicknameTag(db, nickname) {
       if (!user) {
          return res.json({
             success: false,
-            msg: 'second not found user in database'
+            msg: 'Could not add user to pendingRequests'
          });
       }
-      return res.send( user);
+      return res.send(user);
    });
 
 
