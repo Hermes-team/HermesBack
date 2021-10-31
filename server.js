@@ -38,10 +38,9 @@ function connectToDb() {
 }
 
 function findUser(db, nickname, tag) {
-   //! DODAC OBSLUGE BLEDU JESLI NIE MA UZYTKOWNIKA O DANYM TA 
    return new Promise(resolve => {
       db.collection('accounts').findOne({ nickname: `${nickname}`, tag: tag }, (err, result) => {
-         if (err) {
+         if (err || !result) {
             console.log("User not found");
             return resolve(null);
          }
@@ -53,12 +52,15 @@ function findUser(db, nickname, tag) {
 function addUser(db, userRequesting, userGettingRequest) {
    return new Promise(resolve => {
       const a = db.collection('accounts').updateOne({ "_id": ObjectId(userGettingRequest) }, {
-         $push: { pendingRequests: [`${userRequesting}`] } } 
+         $addToSet: { pendingRequests: `${userRequesting}` } } 
       )
-      if (a && a.n > 0) {
-         return resolve(a);
+
+      //! ADD CHECKING IF USER WAS DUPLICATED
+      if (a ) {
+         return resolve({ success: true });
+         // return resolve(a);
       }
-      return resolve({ success: false, reason: 'could not update friends pending request list' });
+      return resolve({ success: false, reason: 'invite is already waiting for acceptation' });
    })
 };
 
@@ -253,12 +255,6 @@ function generateNicknameTag(db, nickname) {
       //* Czy chcemy dodawac do accounts czy osobna tabela ? 
 
       const user = await addUser(db, userRequesting, userGettingRequest)
-      if (!user) {
-         return res.json({
-            success: false,
-            msg: 'Could not add user to pendingRequests'
-         });
-      }
       return res.send(user);
    });
 
