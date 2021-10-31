@@ -20,8 +20,6 @@ const io = require('socket.io')(http, {
 });
 const ObjectId = require('mongodb').ObjectID;
 
-const serverTimezone = moment.tz.guess();
-
 function rand(min, max) {
    return Math.floor(Math.random() * (max - min + 1) + min);
 }
@@ -49,18 +47,12 @@ function findUser(db, nickname, tag) {
    });
 };
 
-function addUser(db, userRequesting, userGettingRequest) {
+function addUserToFriendRequest(db, userRequesting, userGettingRequest) {
    return new Promise(resolve => {
-      const a = db.collection('accounts').updateOne({ "_id": ObjectId(userGettingRequest) }, {
+      db.collection('accounts').updateOne({ "_id": ObjectId(userGettingRequest) }, {
          $addToSet: { pendingRequests: `${userRequesting}` } } 
       )
-
-      //! ADD CHECKING IF USER WAS DUPLICATED
-      if (a ) {
-         return resolve({ success: true });
-         // return resolve(a);
-      }
-      return resolve({ success: false, reason: 'invite is already waiting for acceptation' });
+      return resolve({ success: true});
    })
 };
 
@@ -228,8 +220,6 @@ function generateNicknameTag(db, nickname) {
 
    app.post('/addFriend', async (req, res) => {
 
-      //!CHECK IF USER IS LOGGED
-
       if (!req.body.token || !req.body.userRequestingTag || !req.body.userRequestingNick || !req.body.userReqestedToAddNickname || !req.body.userReqestedToAddTag) {
          return res.json({
             success: false,
@@ -240,22 +230,19 @@ function generateNicknameTag(db, nickname) {
       if (!userRequesting) {
          return res.json({
             success: false,
-            msg: 'first not found user in database'
+            msg: 'first user not found in database'
          });
       }
       const userGettingRequest = await findUser(db, req.body.userReqestedToAddNickname, req.body.userReqestedToAddTag)
       if (!userGettingRequest) {
          return res.json({
             success: false,
-            msg: 'second not found user in database'
+            msg: 'second user not found in database'
          });
       }
-      //! Adding to friend
 
-      //* Czy chcemy dodawac do accounts czy osobna tabela ? 
-
-      const user = await addUser(db, userRequesting, userGettingRequest)
-      return res.send(user);
+      const addedUserResponse = await addUserToFriendRequest(db, userRequesting, userGettingRequest)
+      return res.send(addedUserResponse);
    });
 
 
