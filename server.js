@@ -18,6 +18,7 @@ const io = require('socket.io')(http, {
       methods: ['GET', 'POST']
    }
 });
+const ObjectId = require('mongodb').ObjectID;
 
 const serverTimezone = moment.tz.guess();
 
@@ -36,6 +37,28 @@ function connectToDb() {
    });
 }
 
+function findUser(db, nickname, tag) {
+   return new Promise(resolve => {
+      db.collection('accounts').findOne({ nickname: `${nickname}`, tag: parseInt(tag) }, (err, result) => {
+         if (err) {
+            console.log("User not found");
+            return resolve(null);
+         }
+         console.log("User found");
+         return resolve(result._id);
+      })
+   });
+};
+
+function addUser(db, userRequesting, userGettingRequest) {
+   return new Promise(resolve => {
+      const a = db.collection('accounts').updateOne({ "_id": ObjectId(userGettingRequest) }, {
+         $set: { "pendingRequests": `${userRequesting}` }
+      })
+      return resolve(a);
+   })
+};
+
 async function generateUniqueID(db) {
    while (true) {
       const id = uniqid();
@@ -48,7 +71,7 @@ async function generateUniqueID(db) {
 
 function generateNicknameTag(db, nickname) {
    return new Promise(resolve => {
-      db.collection('accounts').find({ nickname: nickname }).toArray(async (err, res) => {
+      db.collection('accounts').find({ nickname: `${nickname}` }).toArray(async (err, res) => {
          if (err) {
             return resolve({ success: false, err: err, reason: 'db' });
          }
@@ -197,6 +220,45 @@ function generateNicknameTag(db, nickname) {
       })
       res.json({ success: true, token: token, selector: tokenSelector });
    });
+
+   app.post('/addFriend', async (req, res) => {
+
+      //!CHECK IF USER IS LOGGED
+
+      if (!req.body.token || !req.body.userRequestingTag || !req.body.userRequestingNick || !req.body.userReqestedToAddNickname || !req.body.userReqestedToAddTag) {
+         return res.json({
+            success: false,
+            msg: 'incomplete query'
+         });
+      }
+      const userRequesting = await findUser(db, req.body.userRequestingNick, req.body.userRequestingTag)
+      if (!userRequesting) {
+         return res.json({
+            success: false,
+            msg: 'first not found user in database'
+         });
+      }
+      const userGettingRequest = await findUser(db, req.body.userReqestedToAddNickname, req.body.userReqestedToAddTag)
+      if (!userGettingRequest) {
+         return res.json({
+            success: false,
+            msg: 'second not found user in database'
+         });
+      }
+      //! Adding to friend
+
+      //* Czy chcemy dodawac do accounts czy osobna tabela ? 
+
+      const user = await addUser(db, userRequesting, userGettingRequest)
+      if (!user) {
+         return res.json({
+            success: false,
+            msg: 'second not found user in database'
+         });
+      }
+      return res.send( user);
+   });
+
 
    io.on('connection', socket => {
       console.log('socket connected')
