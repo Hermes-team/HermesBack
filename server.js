@@ -66,10 +66,7 @@ async function validateUserToken(db, uniqid,token){
          if (err || !result) {
             return resolve({success: false,reason: "User not found"});
          }
-         console.log(result.nickname)
-         console.log(result.token, token)
          const bcryptToken = hash.verify(token,result.token);
-         console.log(bcryptToken)
          if(bcryptToken === false){
             return resolve({success: false,reason: 'Invalid token'});
          }
@@ -79,9 +76,9 @@ async function validateUserToken(db, uniqid,token){
    });
 }
 
-function addUserToFriendRequest(db, userRequesting, userGettingRequestObjectID) {
+function addUserToFriendRequest(db, userRequestingUniqid, userGettingRequestUniqid) {
    return new Promise(resolve => {
-      db.collection('accounts').updateOne({ "uniqid": userGettingRequestObjectID }, {
+      db.collection('accounts').updateOne({ "uniqid": userGettingRequestUniqid }, {
          $addToSet: { pendingRequests: `${userRequesting}` } } 
       )
       return resolve({ success: true});
@@ -274,6 +271,12 @@ function generateNicknameTag(db, nickname) {
          return res.json({
             success: false,
             msg: 'second user not found in database'
+         });
+      }
+      if (userGettingRequest === userRequesting) {
+         return res.json({
+            success: false,
+            msg: 'you can not yourself to friends'
          });
       }
       const addedUserResponse = await addUserToFriendRequest(db, userRequesting, userGettingRequest)
