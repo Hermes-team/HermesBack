@@ -85,7 +85,7 @@ function generateNicknameTag(db, nickname) {
    const mutex = new Mutex();
 
    app.get('/', (req, res) => {
-      res.send('index page');
+      res.end('index page');
    });
 
    app.post('/register', async (req, res) => {
