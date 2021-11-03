@@ -48,40 +48,33 @@ function getUserUniqidByNicknameAndTag(db, nickname, tag) {
    });
 };
 
-function getUserUniqidByTokenSelector(db, tokenSelector) {
-   return new Promise(resolve => {
-      db.collection('accounts').findOne({ tokenSelector }, (err, result) => {
-         if (err || !result) {
-            return resolve(null);
-         }
-         console.log('Found user by tokenSelector')
-         return resolve(result.uniqid);
-      })
-   });
+async function getUserUniqidByTokenSelector(db, tokenSelector) {
+   const user = await db.collection('accounts').findOne({ tokenSelector })
+   if (!user) {
+      return null;
+   }
+   console.log('Found user by tokenSelector')
+   return user.uniqid
 };
 
 async function validateUserToken(db, uniqid, token) {
-   return new Promise(resolve => {
-      db.collection('accounts').findOne({ uniqid }, (err, result) => {
-         if (err || !result) {
-            return resolve({ success: false, reason: "User not found" });
-         }
-         if (!hash.verify(token, result.token)) {
-            return resolve({ success: false, reason: 'Invalid token' });
-         }
-         console.log('Correcly validated user using token')
-         return resolve({ success: true });
-      })
-   });
+   const user = await db.collection('accounts').findOne({ uniqid });
+   if (!user) {
+      return { success: false, reason: "User not found" }
+   }
+   if (!hash.verify(token, user.token)) {
+      return { success: false, reason: 'Invalid token' };
+   }
+   console.log('Correcly validated user using token')
+   return { success: true }
 }
 
-function addUserToFriendRequest(db, userRequestingUniqid, userGettingRequestUniqid) {
-   return new Promise(resolve => {
-      db.collection('accounts').updateOne({ "uniqid": userGettingRequestUniqid }, {
-         $addToSet: { pendingRequests: userRequestingUniqid }
-      })
-      return resolve({ success: true });
+async function addUserToFriendRequest(db, userRequestingUniqid, userGettingRequestUniqid) {
+   // TODO: check if userRequestingUniqid is not already on user's friend list
+   await db.collection('accounts').updateOne({ "uniqid": userGettingRequestUniqid }, {
+      $addToSet: { pendingRequests: userRequestingUniqid }
    })
+   return { success: true };
 };
 
 async function generateUniqueID(db) {
@@ -96,7 +89,7 @@ async function generateUniqueID(db) {
 
 function generateNicknameTag(db, nickname) {
    return new Promise(resolve => {
-      db.collection('accounts').find({ nickname: `${nickname}` }).toArray(async (err, res) => {
+      db.collection('accounts').find({ nickname }).toArray(async (err, res) => {
          if (err) {
             return resolve({ success: false, err, reason: 'db' });
          }
