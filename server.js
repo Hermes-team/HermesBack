@@ -35,6 +35,13 @@ function connectToDb() {
    });
 }
 
+function generateTokens() {
+   const token = uuidv4();
+   const tokenSelector = uuidv4();
+   const hashedToken = hash.generate(token);
+   return {token, tokenSelector, hashedToken}
+}
+
 function getUserUniqidByNicknameAndTag(db, nickname, tag) {
    return new Promise(resolve => {
       db.collection('accounts').findOne({ nickname, tag }, (err, result) => {
@@ -176,6 +183,7 @@ async function generateNicknameTag(db, nickname) {
          const nicknameTag = tagRes.tag;
          const hashedPassword = await bcrypt.hash(req.body.password, 9);
          const uniqID = await generateUniqueID(db);
+         const {token, tokenSelector, hashedToken} = generateTokens()
          const newUser = {
             email: req.body.email,
             password: hashedPassword,
@@ -183,16 +191,16 @@ async function generateNicknameTag(db, nickname) {
             uniqid: uniqID,
             verified: false,
             tag: nicknameTag,
-            tokenSelector: null,
-            token: null,
-            tokenTimestamp: null
+            token: hashedToken,
+            tokenTimestamp: Date.now(),
+            tokenSelector: tokenSelector
          };
          const { err } = await db.collection('accounts').insertOne(newUser);
          if (err) {
             console.log(err);
             return res.json({ success: false, msg: 'database error' });
          }
-         res.json({ success: true });
+         res.json({ success: true, token: token, selector: tokenSelector });
       });
    });
 
@@ -223,9 +231,7 @@ async function generateNicknameTag(db, nickname) {
             msg: 'incorrect email or password'
          });
       }
-      const token = uuidv4();
-      const tokenSelector = uuidv4();
-      const hashedToken = hash.generate(token);
+      const {token, tokenSelector, hashedToken} = generateTokens()
       await db.collection('accounts').updateOne({ _id: user._id }, {
          $set: {
             token: hashedToken,
