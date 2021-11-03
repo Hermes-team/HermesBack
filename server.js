@@ -87,24 +87,21 @@ async function generateUniqueID(db) {
    }
 }
 
-function generateNicknameTag(db, nickname) {
-   return new Promise(resolve => {
-      db.collection('accounts').find({ nickname }).toArray(async (err, res) => {
-         if (err) {
-            return resolve({ success: false, err, reason: 'db' });
-         }
-         if (res.length > 8000) {
-            return resolve({ success: false, err, reason: 'limit reached' });
-         }
-         while (true) {
-            const tag = rand(1, 9999);
-            const exists = await db.collection('accounts').findOne({ tag, nickname });
-            if (!exists) {
-               return resolve({ success: true, tag });
-            }
-         }
-      });
-   });
+async function generateNicknameTag(db, nickname) {
+   const res = await db.collection('accounts').find({ nickname }).toArray();
+   if (!res) {
+      return { success: false, err, reason: 'db' }
+   }
+   if (res.length > 8000) {
+      return { success: false, err, reason: 'limit reached' };
+   }
+   while (true) {
+      const tag = rand(1, 9999);
+      const exists = await db.collection('accounts').findOne({ tag, nickname });
+      if (!exists) {
+         return { success: true, tag };
+      }
+   }
 }
 
 (async () => {
