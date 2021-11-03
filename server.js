@@ -79,7 +79,7 @@ async function validateUserToken(db, uniqid,token){
 function addUserToFriendRequest(db, userRequestingUniqid, userGettingRequestUniqid) {
    return new Promise(resolve => {
       db.collection('accounts').updateOne({ "uniqid": userGettingRequestUniqid }, {
-         $addToSet: { pendingRequests: `${userRequesting}` } } 
+         $addToSet: { pendingRequests: userRequestingUniqid } } 
       )
       return resolve({ success: true});
    })
