@@ -37,7 +37,7 @@ function connectToDb() {
 
 function getUserUniqidByNicknameAndTag(db, nickname, tag) {
    return new Promise(resolve => {
-      db.collection('accounts').findOne({ nickname: `${nickname}`, tag: tag }, (err, result) => {
+      db.collection('accounts').findOne({ nickname, tag }, (err, result) => {
          if (err || !result) {
             console.log("User not found");
             return resolve(null);
@@ -50,7 +50,7 @@ function getUserUniqidByNicknameAndTag(db, nickname, tag) {
 
 function getUserUniqidByTokenSelector(db, tokenSelector) {
    return new Promise(resolve => {
-      db.collection('accounts').findOne({ tokenSelector: tokenSelector}, (err, result) => {
+      db.collection('accounts').findOne({ tokenSelector }, (err, result) => {
          if (err || !result) {
             return resolve(null);
          }
@@ -60,18 +60,17 @@ function getUserUniqidByTokenSelector(db, tokenSelector) {
    });
 };
 
-async function validateUserToken(db, uniqid,token){
+async function validateUserToken(db, uniqid, token) {
    return new Promise(resolve => {
-      db.collection('accounts').findOne({ uniqid: uniqid}, (err, result) => {
+      db.collection('accounts').findOne({ uniqid }, (err, result) => {
          if (err || !result) {
-            return resolve({success: false,reason: "User not found"});
+            return resolve({ success: false, reason: "User not found" });
          }
-         const bcryptToken = hash.verify(token,result.token);
-         if(bcryptToken === false){
-            return resolve({success: false,reason: 'Invalid token'});
+         if (!hash.verify(token, result.token)) {
+            return resolve({ success: false, reason: 'Invalid token' });
          }
          console.log('Correcly validated user using token')
-         return resolve({success: true});
+         return resolve({ success: true });
       })
    });
 }
@@ -79,9 +78,9 @@ async function validateUserToken(db, uniqid,token){
 function addUserToFriendRequest(db, userRequestingUniqid, userGettingRequestUniqid) {
    return new Promise(resolve => {
       db.collection('accounts').updateOne({ "uniqid": userGettingRequestUniqid }, {
-         $addToSet: { pendingRequests: userRequestingUniqid } } 
-      )
-      return resolve({ success: true});
+         $addToSet: { pendingRequests: userRequestingUniqid }
+      })
+      return resolve({ success: true });
    })
 };
 
@@ -262,7 +261,7 @@ function generateNicknameTag(db, nickname) {
             msg: 'first user not found in database'
          });
       }
-      const tokenValidation = await validateUserToken(db,userRequesting,req.body.token)
+      const tokenValidation = await validateUserToken(db, userRequesting, req.body.token)
       if (!tokenValidation.success) {
          return res.json(tokenValidation);
       }
