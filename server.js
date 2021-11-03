@@ -18,8 +18,7 @@ const io = require('socket.io')(http, {
       methods: ['GET', 'POST']
    }
 });
-
-const serverTimezone = moment.tz.guess();
+const ObjectId = require('mongodb').ObjectID;
 
 function rand(min, max) {
    return Math.floor(Math.random() * (max - min + 1) + min);
@@ -36,6 +35,56 @@ function connectToDb() {
    });
 }
 
+function getUserUniqidByNicknameAndTag(db, nickname, tag) {
+   return new Promise(resolve => {
+      db.collection('accounts').findOne({ nickname: `${nickname}`, tag: tag }, (err, result) => {
+         if (err || !result) {
+            console.log("User not found");
+            return resolve(null);
+         }
+         console.log("User found by NicknameAndTag")
+         return resolve(result.uniqid);
+      })
+   });
+};
+
+function getUserUniqidByTokenSelector(db, tokenSelector) {
+   return new Promise(resolve => {
+      db.collection('accounts').findOne({ tokenSelector: tokenSelector}, (err, result) => {
+         if (err || !result) {
+            return resolve(null);
+         }
+         console.log('Found user by tokenSelector')
+         return resolve(result.uniqid);
+      })
+   });
+};
+
+async function validateUserToken(db, uniqid,token){
+   return new Promise(resolve => {
+      db.collection('accounts').findOne({ uniqid: uniqid}, (err, result) => {
+         if (err || !result) {
+            return resolve({success: false,reason: "User not found"});
+         }
+         const bcryptToken = hash.verify(token,result.token);
+         if(bcryptToken === false){
+            return resolve({success: false,reason: 'Invalid token'});
+         }
+         console.log('Correcly validated user using token')
+         return resolve({success: true});
+      })
+   });
+}
+
+function addUserToFriendRequest(db, userRequestingUniqid, userGettingRequestUniqid) {
+   return new Promise(resolve => {
+      db.collection('accounts').updateOne({ "uniqid": userGettingRequestUniqid }, {
+         $addToSet: { pendingRequests: userRequestingUniqid } } 
+      )
+      return resolve({ success: true});
+   })
+};
+
 async function generateUniqueID(db) {
    while (true) {
       const id = uniqid();
@@ -48,7 +97,7 @@ async function generateUniqueID(db) {
 
 function generateNicknameTag(db, nickname) {
    return new Promise(resolve => {
-      db.collection('accounts').find({ nickname }).toArray(async (err, res) => {
+      db.collection('accounts').find({ nickname: `${nickname}` }).toArray(async (err, res) => {
          if (err) {
             return resolve({ success: false, err, reason: 'db' });
          }
@@ -197,6 +246,43 @@ function generateNicknameTag(db, nickname) {
       })
       res.json({ success: true, token: token, selector: tokenSelector });
    });
+
+   app.post('/addFriend', async (req, res) => {
+
+      if (!req.body.token || !req.body.tokenSelector || !req.body.userReqestedToAddNickname || !req.body.userReqestedToAddTag) {
+         return res.json({
+            success: false,
+            msg: 'incomplete query'
+         });
+      }
+      const userRequesting = await getUserUniqidByTokenSelector(db, req.body.tokenSelector)
+      if (!userRequesting) {
+         return res.json({
+            success: false,
+            msg: 'first user not found in database'
+         });
+      }
+      const tokenValidation = await validateUserToken(db,userRequesting,req.body.token)
+      if (!tokenValidation.success) {
+         return res.json(tokenValidation);
+      }
+      const userGettingRequest = await getUserUniqidByNicknameAndTag(db, req.body.userReqestedToAddNickname, req.body.userReqestedToAddTag)
+      if (!userGettingRequest) {
+         return res.json({
+            success: false,
+            msg: 'second user not found in database'
+         });
+      }
+      if (userGettingRequest === userRequesting) {
+         return res.json({
+            success: false,
+            msg: 'you can not yourself to friends'
+         });
+      }
+      const addedUserResponse = await addUserToFriendRequest(db, userRequesting, userGettingRequest)
+      return res.send(addedUserResponse);
+   });
+
 
    io.on('connection', socket => {
       console.log('socket connected')
