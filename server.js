@@ -8,6 +8,7 @@ const hash = require('password-hash');
 const MongoClient = require('mongodb').MongoClient;
 const moment = require('moment-timezone');
 const rateLimit = require("express-rate-limit");
+const cors = require('cors')
 const express = require('express')
 const app = express();
 const http = require('http').Server(app);
@@ -116,6 +117,8 @@ async function generateNicknameTag(db, nickname) {
    if (err) throw err;
 
    console.log('Connected to the database')
+
+   app.use(cors())
 
    const limiter = rateLimit({
       windowMs: 60 * 1000 * 1, // 1 minute
