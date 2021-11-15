@@ -56,13 +56,13 @@ function getUserUniqidByNicknameAndTag(db, nickname, tag) {
    });
 };
 
-async function getUserUniqidByTokenSelector(db, tokenSelector) {
+async function getUserByTokenSelector(db, tokenSelector) {
    const user = await db.collection('accounts').findOne({ tokenSelector })
    if (!user) {
       return null;
    }
    console.log('Found user by tokenSelector')
-   return user.uniqid
+   return user
 };
 
 async function validateUserToken(db, uniqid, token) {
@@ -78,12 +78,23 @@ async function validateUserToken(db, uniqid, token) {
 }
 
 async function addUserToFriendRequest(db, userRequestingUniqid, userGettingRequestUniqid) {
-   // TODO: check if userRequestingUniqid is not already on user's friend list
    await db.collection('accounts').updateOne({ "uniqid": userGettingRequestUniqid }, {
       $addToSet: { pendingRequests: userRequestingUniqid }
    })
    return { success: true };
 };
+
+// async function getFriends(db, friendsId) {
+//    const friends = 
+//    if (!friends) {
+//       return null;
+//    }
+//    const friendsArray = await friends.toArray();
+//    if(!friendsArray) {
+//       return friendsArray;
+//    }
+//    return { success: false, reason: 'Invalid costam' };
+// }
 
 async function generateUniqueID(db) {
    while (true) {
@@ -111,6 +122,7 @@ async function generateNicknameTag(db, nickname) {
       }
    }
 }
+
 
 (async () => {
    const { err, db } = await connectToDb();
@@ -253,14 +265,14 @@ async function generateNicknameTag(db, nickname) {
             msg: 'incomplete query'
          });
       }
-      const userRequesting = await getUserUniqidByTokenSelector(db, req.body.tokenSelector)
+      const userRequesting = await getUserByTokenSelector(db, req.body.tokenSelector)
       if (!userRequesting) {
          return res.json({
             success: false,
             msg: 'first user not found in database'
          });
       }
-      const tokenValidation = await validateUserToken(db, userRequesting, req.body.token)
+      const tokenValidation = await validateUserToken(db, userRequesting.uniqid, req.body.token)
       if (!tokenValidation.success) {
          return res.json(tokenValidation);
       }
@@ -274,11 +286,55 @@ async function generateNicknameTag(db, nickname) {
       if (userGettingRequest === userRequesting) {
          return res.json({
             success: false,
-            msg: 'you can not yourself to friends'
+            msg: 'you can not add yourself to friends'
          });
       }
       const addedUserResponse = await addUserToFriendRequest(db, userRequesting, userGettingRequest)
       return res.send(addedUserResponse);
+   });
+
+   app.get('/getFriends', async (req, res) => {
+      if (!req.body.token || !req.body.tokenSelector){
+         return res.json({
+            success: false,
+            msg: 'incomplete query'
+         });
+      }
+
+      const user = await getUserByTokenSelector(db, req.body.tokenSelector)
+      if (!user) {
+         return res.json({
+            success: false,
+            msg: 'first user not found in database'
+         });
+      }
+      const tokenValidation = await validateUserToken(db, user.uniqid, req.body.token)
+      if (!tokenValidation.success) {
+         return res.json(tokenValidation);
+      }
+      const pendingRequests = await db.collection('accounts').find( { uniqid : { $in : user.pendingRequests } } ,{ nickname: 1, tag: 1, _id: 0 }).toArray();
+      // const friends = await db.collection('accounts').find( { uniqid : { $in : user.friends } } ,{ nickname: 1, tag: 1, _id: 0 });
+      if(!pendingRequests){
+         return res.json({
+            success: false,
+            msg: 'no friends found'
+         });
+      }
+      // pendingRequests = await pendingRequests.toArray();
+      // if(!pendingRequests){
+      //    return res.json({
+      //       success: false,
+      //       msg: 'no friends found'
+      //    });
+      // }
+      // console.log(pendingRequests)
+      const pendingReuqestMapped = pendingRequests.map(friend => {friend.nickname, friend.tag})
+      return res.json({
+         success: true,
+         pendingRequests: pendingReuqestMapped,
+         friends: 'ala'
+      });
+
    });
 
 
