@@ -306,7 +306,7 @@ async function generateNicknameTag(db, nickname) {
       if (!user) {
          return res.json({
             success: false,
-            msg: 'first user not found in database'
+            msg: 'User trying to add friend was not found in database'
          });
       }
       const tokenValidation = await validateUserToken(db, user.uniqid, req.body.token)
@@ -317,7 +317,7 @@ async function generateNicknameTag(db, nickname) {
       if (!friendUniqid) {
          return res.json({
             success: false,
-            msg: 'second user not found in database'
+            msg: 'Could not find user-friend in database'
          });
       }
       if (user.uniqid === friendUniqid) {
@@ -329,8 +329,6 @@ async function generateNicknameTag(db, nickname) {
       await addFriend(db, user.uniqid, friendUniqid)
       return res.send({ success: true });
    })
-
-
 
    app.get('/getFriends', async (req, res) => {
       if (!req.body.token || !req.body.tokenSelector) {
@@ -378,7 +376,6 @@ async function generateNicknameTag(db, nickname) {
       });
 
    });
-
 
    io.on('connection', socket => {
       console.log('socket connected')
