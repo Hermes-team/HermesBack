@@ -84,18 +84,6 @@ async function addUserToFriendRequest(db, userRequestingUniqid, userGettingReque
    return { success: true };
 };
 
-// async function getFriends(db, friendsId) {
-//    const friends = 
-//    if (!friends) {
-//       return null;
-//    }
-//    const friendsArray = await friends.toArray();
-//    if(!friendsArray) {
-//       return friendsArray;
-//    }
-//    return { success: false, reason: 'Invalid costam' };
-// }
-
 async function generateUniqueID(db) {
    while (true) {
       const id = uniqid();
@@ -127,7 +115,7 @@ async function generateNicknameTag(db, nickname) {
 (async () => {
    const { err, db } = await connectToDb();
    if (err) throw err;
-
+   
    console.log('Connected to the database')
 
    app.use(cors())
@@ -208,7 +196,9 @@ async function generateNicknameTag(db, nickname) {
             tag: nicknameTag,
             token: hashedToken,
             tokenTimestamp: Date.now(),
-            tokenSelector: tokenSelector
+            tokenSelector: tokenSelector,
+            pendingRequests: [],
+            friends: []
          };
          const { err } = await db.collection('accounts').insertOne(newUser);
          if (err) {
@@ -276,20 +266,20 @@ async function generateNicknameTag(db, nickname) {
       if (!tokenValidation.success) {
          return res.json(tokenValidation);
       }
-      const userGettingRequest = await getUserUniqidByNicknameAndTag(db, req.body.userReqestedToAddNickname, req.body.userReqestedToAddTag)
-      if (!userGettingRequest) {
+      const userGettingRequestUniqid = await getUserUniqidByNicknameAndTag(db, req.body.userReqestedToAddNickname, req.body.userReqestedToAddTag)
+      if (!userGettingRequestUniqid) {
          return res.json({
             success: false,
             msg: 'second user not found in database'
          });
       }
-      if (userGettingRequest === userRequesting) {
+      if (userRequesting.uniqid === userGettingRequestUniqid) {
          return res.json({
             success: false,
             msg: 'you can not add yourself to friends'
          });
       }
-      const addedUserResponse = await addUserToFriendRequest(db, userRequesting, userGettingRequest)
+      const addedUserResponse = await addUserToFriendRequest(db, userRequesting.uniqid, userGettingRequestUniqid)
       return res.send(addedUserResponse);
    });
 
@@ -312,27 +302,30 @@ async function generateNicknameTag(db, nickname) {
       if (!tokenValidation.success) {
          return res.json(tokenValidation);
       }
-      const pendingRequests = await db.collection('accounts').find( { uniqid : { $in : user.pendingRequests } } ,{ nickname: 1, tag: 1, _id: 0 }).toArray();
-      // const friends = await db.collection('accounts').find( { uniqid : { $in : user.friends } } ,{ nickname: 1, tag: 1, _id: 0 });
+
+      let pendingRequests = await db.collection('accounts').find( { uniqid : { $in : user.pendingRequests } } ,{ nickname: 1, tag: 1, _id: 0 }).toArray();
       if(!pendingRequests){
          return res.json({
             success: false,
-            msg: 'no friends found'
+            msg: 'could not get pending requests to friends from database'
          });
       }
-      // pendingRequests = await pendingRequests.toArray();
-      // if(!pendingRequests){
-      //    return res.json({
-      //       success: false,
-      //       msg: 'no friends found'
-      //    });
-      // }
-      // console.log(pendingRequests)
-      const pendingReuqestMapped = pendingRequests.map(friend => {friend.nickname, friend.tag})
+
+      let friends = await db.collection('accounts').find( { uniqid : { $in : user.friends } } ,{ nickname: 1, tag: 1, _id: 0 }).toArray();
+      if(!friends){
+         return res.json({
+            success: false,
+            msg: 'could not get friends from database'
+         });
+      }
+
+      pendingRequests = pendingRequests.map(e => ({nickname: e.nickname, tag : e.tag}))
+      friends = friends.map(e => ({nickname: e.nickname, tag : e.tag}))
+
       return res.json({
          success: true,
-         pendingRequests: pendingReuqestMapped,
-         friends: 'ala'
+         friends : friends,
+         pendingRequests: pendingRequests
       });
 
    });
