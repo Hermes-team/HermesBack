@@ -40,7 +40,7 @@ function generateTokens() {
    const token = uuidv4();
    const tokenSelector = uuidv4();
    const hashedToken = hash.generate(token);
-   return {token, tokenSelector, hashedToken}
+   return { token, tokenSelector, hashedToken }
 }
 
 function getUserUniqidByNicknameAndTag(db, nickname, tag) {
@@ -55,6 +55,18 @@ function getUserUniqidByNicknameAndTag(db, nickname, tag) {
       })
    });
 };
+
+function addFriend(db, userUniqid, friendUniqid) {
+   return new Promise(resolve => {
+      db.collection('accounts').updateOne({ "uniqid": userUniqid }, {
+         $pull: { pendingRequests: friendUniqid }
+      })
+      db.collection('accounts').updateOne({ "uniqid": userUniqid }, {
+         $addToSet: { friends: friendUniqid }
+      })
+      resolve({ success: true });
+   });
+}
 
 async function getUserByTokenSelector(db, tokenSelector) {
    const user = await db.collection('accounts').findOne({ tokenSelector })
@@ -115,7 +127,7 @@ async function generateNicknameTag(db, nickname) {
 (async () => {
    const { err, db } = await connectToDb();
    if (err) throw err;
-   
+
    console.log('Connected to the database')
 
    app.use(cors())
@@ -186,7 +198,7 @@ async function generateNicknameTag(db, nickname) {
          const nicknameTag = tagRes.tag;
          const hashedPassword = await bcrypt.hash(req.body.password, 9);
          const uniqID = await generateUniqueID(db);
-         const {token, tokenSelector, hashedToken} = generateTokens()
+         const { token, tokenSelector, hashedToken } = generateTokens()
          const newUser = {
             email: req.body.email,
             password: hashedPassword,
@@ -236,7 +248,7 @@ async function generateNicknameTag(db, nickname) {
             msg: 'incorrect email or password'
          });
       }
-      const {token, tokenSelector, hashedToken} = generateTokens()
+      const { token, tokenSelector, hashedToken } = generateTokens()
       await db.collection('accounts').updateOne({ _id: user._id }, {
          $set: {
             token: hashedToken,
@@ -283,8 +295,45 @@ async function generateNicknameTag(db, nickname) {
       return res.send(addedUserResponse);
    });
 
+   app.post('/acceptFriend', async (req, res) => {
+      if (!req.body.token || !req.body.tokenSelector || !req.body.friendNickname || !req.body.friendsTag) {
+         return res.json({
+            success: false,
+            msg: 'incomplete query'
+         });
+      }
+      const user = await getUserByTokenSelector(db, req.body.tokenSelector)
+      if (!user) {
+         return res.json({
+            success: false,
+            msg: 'first user not found in database'
+         });
+      }
+      const tokenValidation = await validateUserToken(db, user.uniqid, req.body.token)
+      if (!tokenValidation.success) {
+         return res.json(tokenValidation);
+      }
+      const friendUniqid = await getUserUniqidByNicknameAndTag(db, req.body.friendNickname, req.body.friendsTag)
+      if (!friendUniqid) {
+         return res.json({
+            success: false,
+            msg: 'second user not found in database'
+         });
+      }
+      if (user.uniqid === friendUniqid) {
+         return res.json({
+            success: false,
+            msg: 'you can not accept yourself as a friend'
+         });
+      }
+      await addFriend(db, user.uniqid, friendUniqid)
+      return res.send({ success: true });
+   })
+
+
+
    app.get('/getFriends', async (req, res) => {
-      if (!req.body.token || !req.body.tokenSelector){
+      if (!req.body.token || !req.body.tokenSelector) {
          return res.json({
             success: false,
             msg: 'incomplete query'
@@ -303,28 +352,28 @@ async function generateNicknameTag(db, nickname) {
          return res.json(tokenValidation);
       }
 
-      let pendingRequests = await db.collection('accounts').find( { uniqid : { $in : user.pendingRequests } } ,{ nickname: 1, tag: 1, _id: 0 }).toArray();
-      if(!pendingRequests){
+      let pendingRequests = await db.collection('accounts').find({ uniqid: { $in: user.pendingRequests } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
+      if (!pendingRequests) {
          return res.json({
             success: false,
             msg: 'could not get pending requests to friends from database'
          });
       }
 
-      let friends = await db.collection('accounts').find( { uniqid : { $in : user.friends } } ,{ nickname: 1, tag: 1, _id: 0 }).toArray();
-      if(!friends){
+      let friends = await db.collection('accounts').find({ uniqid: { $in: user.friends } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
+      if (!friends) {
          return res.json({
             success: false,
             msg: 'could not get friends from database'
          });
       }
 
-      pendingRequests = pendingRequests.map(e => ({nickname: e.nickname, tag : e.tag}))
-      friends = friends.map(e => ({nickname: e.nickname, tag : e.tag}))
+      pendingRequests = pendingRequests.map(e => ({ nickname: e.nickname, tag: e.tag }))
+      friends = friends.map(e => ({ nickname: e.nickname, tag: e.tag }))
 
       return res.json({
          success: true,
-         friends : friends,
+         friends: friends,
          pendingRequests: pendingRequests
       });
 
