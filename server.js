@@ -15,7 +15,7 @@ const http = require('http').Server(app);
 const Mutex = require('async-mutex').Mutex;
 const io = require('socket.io')(http, {
    cors: {
-      origin: '*/*',
+      origin: '*',
       methods: ['GET', 'POST']
    }
 });
