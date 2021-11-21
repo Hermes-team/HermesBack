@@ -296,20 +296,16 @@ async function generateNicknameTag(db, nickname) {
       });
       
       socket.on('authenticate', async data => {
-         console.log('data', data)
          if (!data?.selector || !data?.token) {
-            console.log('invalid socket data')
-            return socket.emit('auth denied');
+            return socket.emit('auth denied', {reason: 'invalid data'});
          }
          // TODO: change this to use our function
          const user = await db.collection('accounts').findOne({ tokenSelector: data.selector })
          if (!user) {
-            console.log('user not found')
-            return socket.emit('auth denied');
+            return socket.emit('auth denied', {reason: 'user not found'});
          }
          if (!hash.verify(data.token, user.token)) {
-            console.log('hash not verified')
-            return socket.emit('auth denied');
+            return socket.emit('auth denied', {reason: 'invalid token'});
          }
          socket._storage.user = user;
          clearTimeout(socket._storage.timeout);
