@@ -296,6 +296,7 @@ async function generateNicknameTag(db, nickname) {
       });
       
       socket.on('authenticate', async data => {
+         console.log('data', data)
          if (!data?.selector || !data?.token) {
             console.log('invalid socket data')
             return socket.emit('auth denied');
