@@ -316,6 +316,16 @@ async function generateNicknameTag(db, nickname) {
 
          socket.on('message', async data => {
             console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
+            const newMessage = {
+               message: data.message,
+               channel: 'GENERAL_CHANNEL',
+               server: 'GENERAL_SERVER',
+               from: socket._storage.user.nickname,
+               time: Date.now(),
+               timezone: serverTimezone,
+               userID: socket._storage.user.uniqid
+             };
+            io.to('GENERAL_CHANNEL').emit('message', newMessage);
          });
       });
    });
