@@ -284,6 +284,43 @@ async function generateNicknameTag(db, nickname) {
 
    io.on('connection', socket => {
       console.log('socket connected')
+      socket._storage = {};
+      // give the user 10 seconds to authenticate
+      socket._storage.timeout = setTimeout(() => {
+         console.log('socket disconnected due to inactivity');
+         socket.disconnect(true);
+      }, 1000 * 10);
+
+      socket.on('disconnect', () => {
+         console.log('socket disconnected');
+      });
+      
+      socket.on('authenticate', async data => {
+         if (!data?.selector || !data?.token) {
+            console.log('invalid socket data')
+            return socket.emit('auth denied');
+         }
+         // TODO: change this to use our function
+         const user = await db.collection('accounts').findOne({ tokenSelector: data.selector })
+         if (!user) {
+            console.log('user not found')
+            return socket.emit('auth denied');
+         }
+         if (!hash.verify(data.token, user.token)) {
+            console.log('hash not verified')
+            return socket.emit('auth denied');
+         }
+         socket._storage.user = user;
+         clearTimeout(socket._storage.timeout);
+         socket.emit('authenticated');
+         console.log(`${user.email} authenticated`);
+
+         socket.join('GENERAL_CHANNEL');
+
+         socket.on('message', async data => {
+            console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
+         });
+      });
    });
 
    const PORT = process.env.PORT || 3000;
