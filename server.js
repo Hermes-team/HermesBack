@@ -320,6 +320,27 @@ async function generateNicknameTag(db, nickname) {
 
             socket.join('GENERAL_CHANNEL');
 
+            socket.on('get servers', async () => {
+               const server = {
+                  name: 'General',
+                  id: 'GENERAL_SERVER'
+               };
+               socket.emit('servers', [server]);
+            });
+
+            socket.on('get messages', async data => {
+               if (!data?.channel || !data?.server) return;
+               const searchBy = {channel: data.channel, server: data.server};
+               const generalMessages = (await db
+                  .collection('messages')
+                  .find(searchBy)
+                  .sort({$natural: -1})
+                  .limit(50)
+                  .toArray()).reverse();
+               console.log(`returning ${generalMessages.length} messages`);
+               socket.emit('channel messages', {messages: generalMessages, channel: 'GENERAL_CHANNEL'});
+            });
+
             socket.on('message', async data => {
                console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
                const newMessage = {
