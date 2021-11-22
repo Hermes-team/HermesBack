@@ -21,7 +21,7 @@
     "express-rate-limit": "^5.2.6",
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.33",
-    "mongodb": "^3.6.4",
+    "mongodb": "^4.2.0",
     "password-hash": "^1.2.2",
     "socket.io": "^4.4.0",
     "uniqid": "^5.3.0",

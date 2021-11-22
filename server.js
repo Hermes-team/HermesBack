@@ -323,6 +323,7 @@ async function generateNicknameTag(db, nickname) {
             socket.on('get servers', async () => {
                const server = {
                   name: 'General',
+                  lastMessage: 'Yooo',
                   id: 'GENERAL_SERVER'
                };
                socket.emit('servers', [server]);
@@ -333,10 +334,40 @@ async function generateNicknameTag(db, nickname) {
                const searchBy = {channel: data.channel, server: data.server};
                const generalMessages = (await db
                   .collection('messages')
-                  .find(searchBy)
-                  .sort({$natural: -1})
+                  .aggregate([
+                     {
+                        $match: searchBy
+                     },
+                     {
+                        $lookup: {
+                           from: 'accounts',
+                           localField: 'userID',
+                           foreignField: 'uniqid',
+                           as: 'user'
+                        }
+                     },
+                     {
+                        $project: {
+                           message: 1,
+                           channel: 1,
+                           server: 1,
+                           time: 1,
+                           timezone: 1,
+                           uuid: 1,
+                           userID: 1,
+                           user: {
+                              nickname: 1
+                           }
+                        }
+                     }
+                  ])
+                  .sort({_id: -1})
                   .limit(50)
                   .toArray()).reverse();
+               for (const msg of generalMessages) {
+                  delete msg._id;
+                  msg.user = msg.user[0].nickname;
+               }
                console.log(`returning ${generalMessages.length} messages`);
                socket.emit('channel messages', {messages: generalMessages, channel: 'GENERAL_CHANNEL'});
             });
