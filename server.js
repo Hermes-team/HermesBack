@@ -323,8 +323,14 @@ async function generateNicknameTag(db, nickname) {
                from: socket._storage.user.nickname,
                time: Date.now(),
                timezone: serverTimezone,
-               userID: socket._storage.user.uniqid
-             };
+               userID: socket._storage.user.uniqid,
+               uuid: uuidv4()
+            };
+            const {err, res} = await db.collection('messages').insertOne(newMessage);
+            if (err) {
+               console.error(err);
+               return;
+            }
             io.to('GENERAL_CHANNEL').emit('message', newMessage);
          });
       });
