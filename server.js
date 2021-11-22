@@ -19,7 +19,9 @@ const io = require('socket.io')(http, {
       methods: ['GET', 'POST']
    }
 });
+
 const ObjectId = require('mongodb').ObjectID;
+const serverTimezone = moment.tz.guess();
 
 function rand(min, max) {
    return Math.floor(Math.random() * (max - min + 1) + min);
