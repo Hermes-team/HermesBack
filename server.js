@@ -288,6 +288,7 @@ async function generateNicknameTag(db, nickname) {
       console.log('socket connected')
       socket._storage = {};
       // give the user 10 seconds to authenticate
+      socket._storage.mutex = new Mutex();
       socket._storage.timeout = setTimeout(() => {
          console.log('socket disconnected due to inactivity');
          socket.disconnect(true);
@@ -298,42 +299,46 @@ async function generateNicknameTag(db, nickname) {
       });
       
       socket.on('authenticate', async data => {
-         if (!data?.selector || !data?.token) {
-            return socket.emit('auth denied', {reason: 'invalid data'});
-         }
-         // TODO: change this to use our function
-         const user = await db.collection('accounts').findOne({ tokenSelector: data.selector })
-         if (!user) {
-            return socket.emit('auth denied', {reason: 'user not found'});
-         }
-         if (!hash.verify(data.token, user.token)) {
-            return socket.emit('auth denied', {reason: 'invalid token'});
-         }
-         socket._storage.user = user;
-         clearTimeout(socket._storage.timeout);
-         socket.emit('authenticated');
-         console.log(`${user.email} authenticated`);
-
-         socket.join('GENERAL_CHANNEL');
-
-         socket.on('message', async data => {
-            console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
-            const newMessage = {
-               message: data.message,
-               channel: 'GENERAL_CHANNEL',
-               server: 'GENERAL_SERVER',
-               from: socket._storage.user.nickname,
-               time: Date.now(),
-               timezone: serverTimezone,
-               userID: socket._storage.user.uniqid,
-               uuid: uuidv4()
-            };
-            const {err, res} = await db.collection('messages').insertOne(newMessage);
-            if (err) {
-               console.error(err);
-               return;
+         await socket._storage.mutex.runExclusive(async () => {
+            if (socket._storage.authenticated) return;
+            if (!data?.selector || !data?.token) {
+               return socket.emit('auth denied', {reason: 'invalid data'});
             }
-            io.to('GENERAL_CHANNEL').emit('message', newMessage);
+            // TODO: change this to use our function
+            const user = await db.collection('accounts').findOne({ tokenSelector: data.selector })
+            if (!user) {
+               return socket.emit('auth denied', {reason: 'user not found'});
+            }
+            if (!hash.verify(data.token, user.token)) {
+               return socket.emit('auth denied', {reason: 'invalid token'});
+            }
+            socket._storage.authenticated = true;
+            socket._storage.user = user;
+            clearTimeout(socket._storage.timeout);
+            socket.emit('authenticated');
+            console.log(`${user.email} authenticated`);
+
+            socket.join('GENERAL_CHANNEL');
+
+            socket.on('message', async data => {
+               console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
+               const newMessage = {
+                  message: data.message,
+                  channel: 'GENERAL_CHANNEL',
+                  server: 'GENERAL_SERVER',
+                  from: socket._storage.user.nickname,
+                  time: Date.now(),
+                  timezone: serverTimezone,
+                  userID: socket._storage.user.uniqid,
+                  uuid: uuidv4()
+               };
+               const {err, res} = await db.collection('messages').insertOne(newMessage);
+               if (err) {
+                  console.error(err);
+                  return;
+               }
+               io.to('GENERAL_CHANNEL').emit('message', newMessage);
+            });
          });
       });
    });
