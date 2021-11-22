@@ -338,6 +338,7 @@ async function generateNicknameTag(db, nickname) {
                   return;
                }
                io.to('GENERAL_CHANNEL').emit('message', newMessage);
+               socket.emit('message', newMessage)
             });
          });
       });
