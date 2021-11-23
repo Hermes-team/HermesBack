@@ -244,7 +244,14 @@ async function generateNicknameTag(db, nickname) {
             tokenSelector: tokenSelector
          }
       })
-      res.json({ success: true, token: token, selector: tokenSelector });
+      res.json({
+         success: true,
+         token: token,
+         selector: tokenSelector,
+         uniqid: user.uniqid,
+         nickname: user.nickname,
+         tag: user.tag
+      });
    });
 
    app.post('/addFriend', async (req, res) => {
