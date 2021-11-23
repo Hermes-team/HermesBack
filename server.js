@@ -42,7 +42,7 @@ function generateTokens() {
    const token = uuidv4();
    const tokenSelector = uuidv4();
    const hashedToken = hash.generate(token);
-   return {token, tokenSelector, hashedToken}
+   return { token, tokenSelector, hashedToken }
 }
 
 function getUserUniqidByNicknameAndTag(db, nickname, tag) {
@@ -58,29 +58,30 @@ function getUserUniqidByNicknameAndTag(db, nickname, tag) {
    });
 };
 
-async function getUserUniqidByTokenSelector(db, tokenSelector) {
-   const user = await db.collection('accounts').findOne({ tokenSelector })
-   if (!user) {
-      return null;
-   }
-   console.log('Found user by tokenSelector')
-   return user.uniqid
-};
+function addFriend(db, userUniqid, friendUniqid) {
+   return new Promise(resolve => {
+      db.collection('accounts').updateOne({ "uniqid": userUniqid }, {
+         $pull: { pendingRequests: friendUniqid }
+      })
+      db.collection('accounts').updateOne({ "uniqid": userUniqid }, {
+         $addToSet: { friends: friendUniqid }
+      })
+      resolve({ success: true });
+   });
+}
 
-async function validateUserToken(db, uniqid, token) {
-   const user = await db.collection('accounts').findOne({ uniqid });
+async function getUserAndValidateToken(db, token, tokenSelector) {
+   const user = await db.collection('accounts').findOne({ "tokenSelector": tokenSelector })
    if (!user) {
-      return { success: false, reason: "User not found" }
+      return { success: false, reason: "User not found or tokenSelector is not valid" }
    }
    if (!hash.verify(token, user.token)) {
       return { success: false, reason: 'Invalid token' };
    }
-   console.log('Correcly validated user using token')
-   return { success: true }
-}
+   return {success: true, user:user}
+};
 
 async function addUserToFriendRequest(db, userRequestingUniqid, userGettingRequestUniqid) {
-   // TODO: check if userRequestingUniqid is not already on user's friend list
    await db.collection('accounts').updateOne({ "uniqid": userGettingRequestUniqid }, {
       $addToSet: { pendingRequests: userRequestingUniqid }
    })
@@ -113,6 +114,7 @@ async function generateNicknameTag(db, nickname) {
       }
    }
 }
+
 
 (async () => {
    const { err, db } = await connectToDb();
@@ -188,7 +190,7 @@ async function generateNicknameTag(db, nickname) {
          const nicknameTag = tagRes.tag;
          const hashedPassword = await bcrypt.hash(req.body.password, 9);
          const uniqID = await generateUniqueID(db);
-         const {token, tokenSelector, hashedToken} = generateTokens()
+         const { token, tokenSelector, hashedToken } = generateTokens()
          const newUser = {
             email: req.body.email,
             password: hashedPassword,
@@ -198,7 +200,9 @@ async function generateNicknameTag(db, nickname) {
             tag: nicknameTag,
             token: hashedToken,
             tokenTimestamp: Date.now(),
-            tokenSelector: tokenSelector
+            tokenSelector: tokenSelector,
+            pendingRequests: [],
+            friends: []
          };
          const { err } = await db.collection('accounts').insertOne(newUser);
          if (err) {
@@ -236,7 +240,7 @@ async function generateNicknameTag(db, nickname) {
             msg: 'incorrect email or password'
          });
       }
-      const {token, tokenSelector, hashedToken} = generateTokens()
+      const { token, tokenSelector, hashedToken } = generateTokens()
       await db.collection('accounts').updateOne({ _id: user._id }, {
          $set: {
             token: hashedToken,
@@ -255,34 +259,98 @@ async function generateNicknameTag(db, nickname) {
             msg: 'incomplete query'
          });
       }
-      const userRequesting = await getUserUniqidByTokenSelector(db, req.body.tokenSelector)
-      if (!userRequesting) {
-         return res.json({
-            success: false,
-            msg: 'first user not found in database'
-         });
+      const userResponse = await getUserAndValidateToken(db, req.body.token, req.body.tokenSelector)
+      if (!userResponse.success) {
+         return res.json(userResponse);
       }
-      const tokenValidation = await validateUserToken(db, userRequesting, req.body.token)
-      if (!tokenValidation.success) {
-         return res.json(tokenValidation);
-      }
-      const userGettingRequest = await getUserUniqidByNicknameAndTag(db, req.body.userReqestedToAddNickname, req.body.userReqestedToAddTag)
-      if (!userGettingRequest) {
+
+      const userGettingRequestUniqid = await getUserUniqidByNicknameAndTag(db, req.body.userReqestedToAddNickname, req.body.userReqestedToAddTag)
+      if (!userGettingRequestUniqid) {
          return res.json({
             success: false,
             msg: 'second user not found in database'
          });
       }
-      if (userGettingRequest === userRequesting) {
+
+      if (userResponse.user.uniqid === userGettingRequestUniqid) {
          return res.json({
             success: false,
-            msg: 'you can not yourself to friends'
+            msg: 'you can not add yourself to friends'
          });
       }
-      const addedUserResponse = await addUserToFriendRequest(db, userRequesting, userGettingRequest)
+      const addedUserResponse = await addUserToFriendRequest(db, userResponse.user.uniqid, userGettingRequestUniqid)
       return res.send(addedUserResponse);
    });
 
+   app.post('/acceptFriend', async (req, res) => {
+      if (!req.body.token || !req.body.tokenSelector || !req.body.friendNickname || !req.body.friendsTag) {
+         return res.json({
+            success: false,
+            msg: 'incomplete query'
+         });
+      }
+      const userResponse = await getUserAndValidateToken(db, req.body.token, req.body.tokenSelector)
+      if (!userResponse.success) {
+         return res.json(userResponse);
+      }
+
+      const friendUniqid = await getUserUniqidByNicknameAndTag(db, req.body.friendNickname, req.body.friendsTag)
+      if (!friendUniqid) {
+         return res.json({
+            success: false,
+            msg: 'Could not find user-friend in database'
+         });
+      }
+      if (userResponse.user.uniqid === friendUniqid) {
+         return res.json({
+            success: false,
+            msg: 'you can not accept yourself as a friend'
+         });
+      }
+      await addFriend(db, userResponse.user.uniqid, friendUniqid)
+      return res.send({ success: true });
+   })
+
+   app.get('/getFriends', async (req, res) => {
+      if (!req.body.token || !req.body.tokenSelector) {
+         return res.json({
+            success: false,
+            msg: 'incomplete query'
+         });
+      }
+      const userResponse = await getUserAndValidateToken(db, req.body.token, req.body.tokenSelector)
+      if (!userResponse.success) {
+         return res.json(userResponse);
+      }
+
+      const user = userResponse.user;
+
+      let pendingRequests = await db.collection('accounts').find({ uniqid: { $in: user.pendingRequests } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
+      if (!pendingRequests) {
+         return res.json({
+            success: false,
+            msg: 'could not get pending requests to friends from database'
+         });
+      }
+
+      let friends = await db.collection('accounts').find({ uniqid: { $in: user.friends } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
+      if (!friends) {
+         return res.json({
+            success: false,
+            msg: 'could not get friends from database'
+         });
+      }
+
+      pendingRequests = pendingRequests.map(e => ({ nickname: e.nickname, tag: e.tag }))
+      friends = friends.map(e => ({ nickname: e.nickname, tag: e.tag }))
+
+      return res.json({
+         success: true,
+         friends: friends,
+         pendingRequests: pendingRequests
+      });
+
+   });
 
    io.on('connection', socket => {
       console.log('socket connected')
