@@ -71,26 +71,13 @@ function addFriend(db, userUniqid, friendUniqid) {
 async function getUserAndValidateToken(db, token, tokenSelector) {
    const user = await db.collection('accounts').findOne({ "tokenSelector": tokenSelector })
    if (!user) {
-      return { success: false, reason: "User not found" }
+      return { success: false, reason: "User not found or tokenSelector is not valid" }
    }
    if (!hash.verify(token, user.token)) {
       return { success: false, reason: 'Invalid token' };
    }
-   console.log('Found user')
    return {success: true, user:user}
 };
-
-// async function validateUserToken(db, uniqid, token) {
-//    const user = await db.collection('accounts').findOne({ uniqid });
-//    if (!user) {
-//       return { success: false, reason: "User not found" }
-//    }
-//    if (!hash.verify(token, user.token)) {
-//       return { success: false, reason: 'Invalid token' };
-//    }
-//    console.log('Correcly validated user using token')
-//    return { success: true }
-// }
 
 async function addUserToFriendRequest(db, userRequestingUniqid, userGettingRequestUniqid) {
    await db.collection('accounts').updateOne({ "uniqid": userGettingRequestUniqid }, {
@@ -272,7 +259,7 @@ async function generateNicknameTag(db, nickname) {
       }
       const userResponse = await getUserAndValidateToken(db, req.body.token, req.body.tokenSelector)
       if (!userResponse.success) {
-         return res.json(user);
+         return res.json(userResponse);
       }
 
       const userGettingRequestUniqid = await getUserUniqidByNicknameAndTag(db, req.body.userReqestedToAddNickname, req.body.userReqestedToAddTag)
@@ -302,7 +289,7 @@ async function generateNicknameTag(db, nickname) {
       }
       const userResponse = await getUserAndValidateToken(db, req.body.token, req.body.tokenSelector)
       if (!userResponse.success) {
-         return res.json(user);
+         return res.json(userResponse);
       }
 
       const friendUniqid = await getUserUniqidByNicknameAndTag(db, req.body.friendNickname, req.body.friendsTag)
@@ -331,7 +318,7 @@ async function generateNicknameTag(db, nickname) {
       }
       const userResponse = await getUserAndValidateToken(db, req.body.token, req.body.tokenSelector)
       if (!userResponse.success) {
-         return res.json(user);
+         return res.json(userResponse);
       }
 
       const user = userResponse.user;
