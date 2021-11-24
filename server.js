@@ -396,6 +396,7 @@ async function generateNicknameTag(db, nickname) {
             socket.join('GENERAL_CHANNEL');
 
             socket.on('get servers', async () => {
+               console.log(`${socket._storage.user.nickname} requested servers`)
                const server = {
                   name: 'General',
                   lastMessage: 'Yooo',
