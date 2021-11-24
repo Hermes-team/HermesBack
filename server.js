@@ -352,7 +352,7 @@ async function generateNicknameTag(db, nickname) {
                friends = friends.map(e => ({ nickname: e.nickname, tag: e.tag }))
                console.log(pendingRequests)
                console.log(friends)
-               return socket.emit('accept friend success', { success: 'true',friends: friends, pendingRequests: pendingRequests })
+               return socket.emit('get friends success', { success: 'true',friends: friends, pendingRequests: pendingRequests })
             });
 
             socket.on('get messages', async data => {
