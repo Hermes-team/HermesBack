@@ -309,7 +309,7 @@ async function generateNicknameTag(db, nickname) {
                await addUserToFriendRequest(db, socket._storage.user.uniqid, friendUniqid)
                const clients = io.sockets.clients();
                const friend = clients.find(e => e._storage.user.uniqid === friendUniqid);
-               if (!friend) {
+               if (friend) {
                   friend.emit('add friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
                }
                socket.emit('add friend success', { success: 'true' })
@@ -327,7 +327,7 @@ async function generateNicknameTag(db, nickname) {
                await addFriend(db, socket._storage.user.uniqid, friendUniqid)
                const clients = io.sockets.clients();
                const friend = clients.find(e => e._storage.user.uniqid === friendUniqid);
-               if (!friend) {
+               if (friend) {
                   friend.emit('accept friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
                }
                socket.emit('accept friend success', { success: 'true' })
