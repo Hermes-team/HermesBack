@@ -281,7 +281,7 @@ async function generateNicknameTag(db, nickname) {
             socket._storage.user = userResponse.user;
             clearTimeout(socket._storage.timeout);
             socket.emit('authenticated');
-            console.log(`${user.email} authenticated`);
+            console.log(`${socket._storage.user.email} authenticated`);
 
             socket.join('GENERAL_CHANNEL');
 
@@ -334,29 +334,24 @@ async function generateNicknameTag(db, nickname) {
             });
 
             socket.on('get friends', async () => {
-               const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
-               if (socket._storage.user.uniqid === friendUniqid) {
-                  return socket.emit('accept friend fail',{
-                     reason: 'You can not add yourself to friends'
-                  });
-               }
 
                //* There should be never a case where pendingReuqest to friends or friends are not found
                //* since they are added when the user is created
 
-               let pendingRequests = await db.collection('accounts').find({ uniqid: { $in: user.pendingRequests } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
+               let pendingRequests = await db.collection('accounts').find({ uniqid: { $in: socket._storage.user.pendingRequests } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
                if (!pendingRequests) {
                   return socket.emit('get friends fail', { reason: 'could not get pending requests to friends from database' });
                }
 
-               let friends = await db.collection('accounts').find({ uniqid: { $in: user.friends } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
+               let friends = await db.collection('accounts').find({ uniqid: { $in: socket._storage.user.friends } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
                if (!friends) {
                   return socket.emit('get friends fail', { reason: 'could not get friends from database' });
                }
 
                pendingRequests = pendingRequests.map(e => ({ nickname: e.nickname, tag: e.tag }))
                friends = friends.map(e => ({ nickname: e.nickname, tag: e.tag }))
-
+               console.log(pendingRequests)
+               console.log(friends)
                return socket.emit('accept friend success', { success: 'true',friends: friends, pendingRequests: pendingRequests })
             });
 
