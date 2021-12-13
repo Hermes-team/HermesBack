@@ -403,7 +403,9 @@ async function generateNicknameTag(db, nickname) {
                   delete msg._id;
                   msg.user = msg.user[0].nickname;
                }
-               console.log(`returning ${generalMessages} messages`);
+               console.log(generalMessages.map(e => e.time))
+               console.log(generalMessages.map(e => e.message))
+               console.log(`returning ${generalMessages.length} messages`);
                socket.emit('channel messages', {messages: generalMessages, channel: 'GENERAL_CHANNEL'});
             });
 
