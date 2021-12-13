@@ -294,12 +294,15 @@ async function generateNicknameTag(db, nickname) {
 
             socket.on('get servers', async () => {
                console.log(`${socket._storage.user.nickname} requested servers`)
-               const server = {
+               const search = {members: {$in: [socket._storage.user.uniqid]}};
+               const servers = await db.collection('servers').find(search).toArray();
+               const generalServer = {
                   name: 'General',
                   lastMessage: 'Yooo',
                   id: 'GENERAL_SERVER'
                };
-               socket.emit('servers', [server]);
+               servers.unshift(generalServer)
+               socket.emit('servers', servers);
             });
 
             socket.on('add friend', async data => {
@@ -418,13 +421,27 @@ async function generateNicknameTag(db, nickname) {
                   userID: socket._storage.user.uniqid,
                   uuid: uuidv4()
                };
-               const {err, res} = await db.collection('messages').insertOne(newMessage);
+               const {err} = await db.collection('messages').insertOne(newMessage);
                if (err) {
-                  console.error(err);
-                  return;
+                  return console.error(err);
                }
                io.to('GENERAL_CHANNEL').emit('message', newMessage);
             });
+
+            socket.on('new server', async data => {
+               console.log(`${socket._storage.user.nickname} creates "${data.name}"`);
+               const newServer = {
+                  name: data.name,
+                  creator: socket._storage.user.uniqid,
+                  members: [socket._storage.user.uniqid],
+                  id: uuidv4()
+               };
+               const {err} = await db.collection('servers').insertOne(newServer);
+               if (err) {
+                  return console.error(err);
+               }
+               socket.emit('server created', newServer);
+            })
          });
       });
    });
