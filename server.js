@@ -356,8 +356,8 @@ async function generateNicknameTag(db, nickname) {
                   return socket.emit('get friends fail', { reason: 'could not get friends from database' });
                }
 
-               pendingRequests = pendingRequests.map(e => ({ nickname: e.nickname, tag: e.tag }))
-               friends = friends.map(e => ({ nickname: e.nickname, tag: e.tag }))
+               pendingRequests = pendingRequests.map(e => ({ uniqid: e.uniqid, nickname: e.nickname, tag: e.tag }))
+               friends = friends.map(e => ({ uniqid: e.uniqid, nickname: e.nickname, tag: e.tag }))
                console.log(pendingRequests)
                console.log(friends)
                return socket.emit('get friends success', { success: 'true',friends: friends, pendingRequests: pendingRequests })
