@@ -395,6 +395,7 @@ async function generateNicknameTag(db, nickname) {
                         }
                      }
                   ])
+                  .sort({_id: 1})
                   .toArray();
                generalMessages.reverse();
                const res = [];
@@ -404,7 +405,7 @@ async function generateNicknameTag(db, nickname) {
                   msg.user = msg.user[0].nickname;
                   res.push(msg);
                   i++;
-                  if (i === 51) break;
+                  if (i === 50) break;
                }
                res.reverse();
                console.log(`returning ${res.length} messages`);
