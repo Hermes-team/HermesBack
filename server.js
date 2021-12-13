@@ -411,6 +411,7 @@ async function generateNicknameTag(db, nickname) {
                      },
                      {
                         $project: {
+                           _id: 0,
                            message: 1,
                            channel: 1,
                            server: 1,
@@ -429,7 +430,6 @@ async function generateNicknameTag(db, nickname) {
                   .toArray();
                generalMessages.reverse();
                for (const msg of generalMessages) {
-                  delete msg._id;
                   msg.user = msg.user[0].nickname;
                }
                console.log(`returning ${generalMessages.length} messages`);
