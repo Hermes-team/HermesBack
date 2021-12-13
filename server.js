@@ -366,7 +366,7 @@ async function generateNicknameTag(db, nickname) {
             socket.on('get messages', async data => {
                if (!data?.channel || !data?.server) return;
                const searchBy = {channel: data.channel, server: data.server};
-               const generalMessages = (await db
+               const generalMessages = await db
                   .collection('messages')
                   .aggregate([
                      {
@@ -395,15 +395,20 @@ async function generateNicknameTag(db, nickname) {
                         }
                      }
                   ])
-                  .sort({_id: -1})
-                  .limit(50)
-                  .toArray()).reverse();
+                  .toArray();
+               generalMessages.reverse();
+               const res = [];
+               let i = 0;
                for (const msg of generalMessages) {
                   delete msg._id;
                   msg.user = msg.user[0].nickname;
+                  res.push(msg);
+                  i++;
+                  if (i === 51) break;
                }
-               console.log(`returning ${generalMessages.length} messages`);
-               socket.emit('channel messages', {messages: generalMessages, channel: 'GENERAL_CHANNEL'});
+               res.reverse();
+               console.log(`returning ${res.length} messages`);
+               socket.emit('channel messages', {messages: res, channel: 'GENERAL_CHANNEL'});
             });
 
             socket.on('message', async data => {
