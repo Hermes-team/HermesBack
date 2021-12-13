@@ -58,6 +58,17 @@ function getUserUniqidByNicknameAndTag(db, nickname, tag) {
    });
 };
 
+function checkIfUserExistsInDatabase(db, uniqid) {
+   return new Promise(resolve => {
+      db.collection('accounts').findOne({ uniqid }, (err, result) => {
+         if (err || !result) {
+            return resolve(false);
+         }
+         return resolve(true);
+      })
+   });
+}
+
 function addFriend(db, userUniqid, friendUniqid) {
    return new Promise(resolve => {
       db.collection('accounts').updateOne({ "uniqid": userUniqid }, {
@@ -306,13 +317,21 @@ async function generateNicknameTag(db, nickname) {
             });
 
             socket.on('add friend', async data => {
-               if (!data?.nickname || !data?.tag) return;
+               // if (!data?.nickname || !data?.tag) return;
+               // const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
 
-               const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
-               if (!friendUniqid) {
-                  //TODO CHANGE LOGIC TO RETURN SUCCESS INSTEAD OF CHECKING NUMBER IF SOMEHOW UNIQID CAN BE 0 
+               if(!data?.uniqid) return;
+               
+               if(await checkIfUserExistsInDatabase(db, data.uniqid)){
                   return socket.emit('add friend fail', { reason: 'user not found' });
                }
+
+               const friendUniqid = data.uniqid;
+
+               // if (!friendUniqid) {
+               //    //TODO CHANGE LOGIC TO RETURN SUCCESS INSTEAD OF CHECKING NUMBER IF SOMEHOW UNIQID CAN BE 0 
+               //    return socket.emit('add friend fail', { reason: 'user not found' });
+               // }
                if (socket._storage.user.uniqid === friendUniqid) {
                   return socket.emit('add friend fail',{ 
                      reason: 'You can not add yourself to friends'});
@@ -327,9 +346,16 @@ async function generateNicknameTag(db, nickname) {
             });
 
             socket.on('accept friend', async data => {
-               if (!data?.nickname || !data?.tag) return;
+               // if (!data?.nickname || !data?.tag) return;
+               if(!data?.uniqid) return;
 
-               const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
+               if(await checkIfUserExistsInDatabase(db, data.uniqid)){
+                  return socket.emit('add friend fail', { reason: 'user not found' });
+               }
+
+               const friendUniqid = data.uniqid;
+
+               // const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
                if (socket._storage.user.uniqid === friendUniqid) {
                   return socket.emit('accept friend fail',{
                      reason: 'You can not add yourself to friends'
@@ -359,8 +385,8 @@ async function generateNicknameTag(db, nickname) {
                   return socket.emit('get friends fail', { reason: 'could not get friends from database' });
                }
 
-               pendingRequests = pendingRequests.map(e => ({ nickname: e.nickname, tag: e.tag }))
-               friends = friends.map(e => ({ nickname: e.nickname, tag: e.tag }))
+               pendingRequests = pendingRequests.map(e => ({ uniqid: e.uniqid, nickname: e.nickname, tag: e.tag }))
+               friends = friends.map(e => ({ uniqid: e.uniqid, nickname: e.nickname, tag: e.tag }))
                console.log(pendingRequests)
                console.log(friends)
                return socket.emit('get friends success', { success: true, friends, pendingRequests })
@@ -400,7 +426,8 @@ async function generateNicknameTag(db, nickname) {
                   ])
                   .sort({_id: -1})
                   .limit(50)
-                  .toArray()).reverse();
+                  .toArray();
+               generalMessages.reverse();
                for (const msg of generalMessages) {
                   delete msg._id;
                   msg.user = msg.user[0].nickname;
@@ -410,6 +437,7 @@ async function generateNicknameTag(db, nickname) {
             });
 
             socket.on('message', async data => {
+               if (!data.message) return;
                console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
                const newMessage = {
                   message: data.message,
