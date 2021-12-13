@@ -303,9 +303,12 @@ async function generateNicknameTag(db, nickname) {
             });
 
             socket.on('add friend', async data => {
-               if (!data?.nickname || !data?.tag) return;
+               // if (!data?.nickname || !data?.tag) return;
+               // const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
 
-               const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
+               if(!data?.uniqid) return;
+               const friendUniqid = data.uniqid;
+
                if (!friendUniqid) {
                   //TODO CHANGE LOGIC TO RETURN SUCCESS INSTEAD OF CHECKING NUMBER IF SOMEHOW UNIQID CAN BE 0 
                   return socket.emit('add friend fail', { reason: 'user not found' });
