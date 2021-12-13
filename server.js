@@ -408,6 +408,7 @@ async function generateNicknameTag(db, nickname) {
             });
 
             socket.on('message', async data => {
+               if (!data.message) return;
                console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
                const newMessage = {
                   message: data.message,
