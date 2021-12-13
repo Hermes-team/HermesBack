@@ -258,107 +258,6 @@ async function generateNicknameTag(db, nickname) {
       });
    });
 
-   app.post('/addFriend', async (req, res) => {
-
-      if (!req.body.token || !req.body.tokenSelector || !req.body.userReqestedToAddNickname || !req.body.userReqestedToAddTag) {
-         return res.json({
-            success: false,
-            msg: 'incomplete query'
-         });
-      }
-      const userResponse = await getUserAndValidateToken(db, req.body.token, req.body.tokenSelector)
-      if (!userResponse.success) {
-         return res.json(userResponse);
-      }
-
-      const userGettingRequestUniqid = await getUserUniqidByNicknameAndTag(db, req.body.userReqestedToAddNickname, req.body.userReqestedToAddTag)
-      if (!userGettingRequestUniqid) {
-         return res.json({
-            success: false,
-            msg: 'second user not found in database'
-         });
-      }
-
-      if (userResponse.user.uniqid === userGettingRequestUniqid) {
-         return res.json({
-            success: false,
-            msg: 'you can not add yourself to friends'
-         });
-      }
-      const addedUserResponse = await addUserToFriendRequest(db, userResponse.user.uniqid, userGettingRequestUniqid)
-      return res.send(addedUserResponse);
-   });
-
-   app.post('/acceptFriend', async (req, res) => {
-      if (!req.body.token || !req.body.tokenSelector || !req.body.friendNickname || !req.body.friendsTag) {
-         return res.json({
-            success: false,
-            msg: 'incomplete query'
-         });
-      }
-      const userResponse = await getUserAndValidateToken(db, req.body.token, req.body.tokenSelector)
-      if (!userResponse.success) {
-         return res.json(userResponse);
-      }
-
-      const friendUniqid = await getUserUniqidByNicknameAndTag(db, req.body.friendNickname, req.body.friendsTag)
-      if (!friendUniqid) {
-         return res.json({
-            success: false,
-            msg: 'Could not find user-friend in database'
-         });
-      }
-      if (userResponse.user.uniqid === friendUniqid) {
-         return res.json({
-            success: false,
-            msg: 'you can not accept yourself as a friend'
-         });
-      }
-      await addFriend(db, userResponse.user.uniqid, friendUniqid)
-      return res.send({ success: true });
-   })
-
-   app.get('/getFriends', async (req, res) => {
-      if (!req.body.token || !req.body.tokenSelector) {
-         return res.json({
-            success: false,
-            msg: 'incomplete query'
-         });
-      }
-      const userResponse = await getUserAndValidateToken(db, req.body.token, req.body.tokenSelector)
-      if (!userResponse.success) {
-         return res.json(userResponse);
-      }
-
-      const user = userResponse.user;
-
-      let pendingRequests = await db.collection('accounts').find({ uniqid: { $in: user.pendingRequests } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
-      if (!pendingRequests) {
-         return res.json({
-            success: false,
-            msg: 'could not get pending requests to friends from database'
-         });
-      }
-
-      let friends = await db.collection('accounts').find({ uniqid: { $in: user.friends } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
-      if (!friends) {
-         return res.json({
-            success: false,
-            msg: 'could not get friends from database'
-         });
-      }
-
-      pendingRequests = pendingRequests.map(e => ({ nickname: e.nickname, tag: e.tag }))
-      friends = friends.map(e => ({ nickname: e.nickname, tag: e.tag }))
-
-      return res.json({
-         success: true,
-         friends: friends,
-         pendingRequests: pendingRequests
-      });
-
-   });
-
    io.on('connection', socket => {
       console.log('socket connected')
       socket._storage = {};
@@ -379,19 +278,17 @@ async function generateNicknameTag(db, nickname) {
             if (!data?.selector || !data?.token) {
                return socket.emit('auth denied', {reason: 'invalid data'});
             }
-            // TODO: change this to use our function
-            const user = await db.collection('accounts').findOne({ tokenSelector: data.selector })
-            if (!user) {
-               return socket.emit('auth denied', {reason: 'user not found'});
+
+            const userResponse = await getUserAndValidateToken(db, data.token, data.selector)
+            if (!userResponse.success) {
+               return socket.emit('auth denied', userResponse.reason);
             }
-            if (!hash.verify(data.token, user.token)) {
-               return socket.emit('auth denied', {reason: 'invalid token'});
-            }
+
             socket._storage.authenticated = true;
-            socket._storage.user = user;
+            socket._storage.user = userResponse.user;
             clearTimeout(socket._storage.timeout);
             socket.emit('authenticated');
-            console.log(`${user.email} authenticated`);
+            console.log(`${socket._storage.user.email} authenticated`);
 
             socket.join('GENERAL_CHANNEL');
 
@@ -403,6 +300,67 @@ async function generateNicknameTag(db, nickname) {
                   id: 'GENERAL_SERVER'
                };
                socket.emit('servers', [server]);
+            });
+
+            socket.on('add friend', async data => {
+               if (!data?.nickname || !data?.tag) return;
+
+               const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
+               if (!friendUniqid) {
+                  //TODO CHANGE LOGIC TO RETURN SUCCESS INSTEAD OF CHECKING NUMBER IF SOMEHOW UNIQID CAN BE 0 
+                  return socket.emit('add friend fail', { reason: 'user not found' });
+               }
+               if (socket._storage.user.uniqid === friendUniqid) {
+                  return socket.emit('add friend fail',{ 
+                     reason: 'You can not add yourself to friends'});
+               }
+               await addUserToFriendRequest(db, socket._storage.user.uniqid, friendUniqid)
+               const clients = io.sockets.clients();
+               const friend = clients.find(e => e._storage.user.uniqid === friendUniqid);
+               if (friend) {
+                  friend.emit('add friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
+               }
+               socket.emit('add friend success', { success: 'true' })
+            });
+
+            socket.on('accept friend', async data => {
+               if (!data?.nickname || !data?.tag) return;
+
+               const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
+               if (socket._storage.user.uniqid === friendUniqid) {
+                  return socket.emit('accept friend fail',{
+                     reason: 'You can not add yourself to friends'
+                  });
+               }
+               await addFriend(db, socket._storage.user.uniqid, friendUniqid)
+               const clients = io.sockets.clients();
+               const friend = clients.find(e => e._storage.user.uniqid === friendUniqid);
+               if (friend) {
+                  friend.emit('accept friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
+               }
+               socket.emit('accept friend success', { success: 'true' })
+            });
+
+            socket.on('get friends', async () => {
+
+               //* There should be never a case where pendingReuqest to friends or friends are not found
+               //* since they are added when the user is created
+
+               let pendingRequests = await db.collection('accounts').find({ uniqid: { $in: socket._storage.user.pendingRequests } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
+               if (!pendingRequests) {
+                  return socket.emit('get friends fail', { reason: 'could not get pending requests to friends from database' });
+               }
+
+               let friends = await db.collection('accounts').find({ uniqid: { $in: socket._storage.user.friends } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
+               if (!friends) {
+                  return socket.emit('get friends fail', { reason: 'could not get friends from database' });
+               }
+
+               pendingRequests = pendingRequests.map(e => ({ nickname: e.nickname, tag: e.tag }))
+               friends = friends.map(e => ({ nickname: e.nickname, tag: e.tag }))
+               console.log(pendingRequests)
+               console.log(friends)
+               return socket.emit('get friends success', { success: 'true',friends: friends, pendingRequests: pendingRequests })
             });
 
             socket.on('get messages', async data => {
