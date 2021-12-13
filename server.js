@@ -395,7 +395,7 @@ async function generateNicknameTag(db, nickname) {
             socket.on('get messages', async data => {
                if (!data?.server) return;
                const searchBy = {server: data.server};
-               const generalMessages = (await db
+               const generalMessages = await db
                   .collection('messages')
                   .aggregate([
                      {
