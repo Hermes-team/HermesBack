@@ -396,14 +396,14 @@ async function generateNicknameTag(db, nickname) {
                      }
                   ])
                   .sort({_id: -1})
-                  .limit(50)
+                  .limit(10)
                   .toArray();
                generalMessages.reverse();
                for (const msg of generalMessages) {
                   delete msg._id;
                   msg.user = msg.user[0].nickname;
                }
-               console.log(`returning ${generalMessages.length} messages`);
+               console.log(`returning ${generalMessages} messages`);
                socket.emit('channel messages', {messages: generalMessages, channel: 'GENERAL_CHANNEL'});
             });
 
