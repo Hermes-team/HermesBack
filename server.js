@@ -395,9 +395,9 @@ async function generateNicknameTag(db, nickname) {
                         }
                      }
                   ])
-                  .sort({_id: -1})
+                  .sort({_id: 1})
                   .limit(50)
-                  .toArray()).reverse();
+                  .toArray());
                for (const msg of generalMessages) {
                   delete msg._id;
                   msg.user = msg.user[0].nickname;
