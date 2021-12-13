@@ -323,7 +323,7 @@ async function generateNicknameTag(db, nickname) {
                if (friend) {
                   friend.emit('add friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
                }
-               socket.emit('add friend success', { success: 'true' })
+               socket.emit('add friend success', { success: true })
             });
 
             socket.on('accept friend', async data => {
@@ -341,7 +341,7 @@ async function generateNicknameTag(db, nickname) {
                if (friend) {
                   friend.emit('accept friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
                }
-               socket.emit('accept friend success', { success: 'true' })
+               socket.emit('accept friend success', { success: true })
             });
 
             socket.on('get friends', async () => {
@@ -363,12 +363,12 @@ async function generateNicknameTag(db, nickname) {
                friends = friends.map(e => ({ nickname: e.nickname, tag: e.tag }))
                console.log(pendingRequests)
                console.log(friends)
-               return socket.emit('get friends success', { success: 'true',friends: friends, pendingRequests: pendingRequests })
+               return socket.emit('get friends success', { success: true, friends, pendingRequests })
             });
 
             socket.on('get messages', async data => {
-               if (!data?.channel || !data?.server) return;
-               const searchBy = {channel: data.channel, server: data.server};
+               if (!data?.server) return;
+               const searchBy = {server: data.server};
                const generalMessages = (await db
                   .collection('messages')
                   .aggregate([
