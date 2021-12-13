@@ -394,22 +394,13 @@ async function generateNicknameTag(db, nickname) {
                            }
                         }
                      }
-                  ])
-                  .sort({_id: 1})
-                  .toArray();
-               generalMessages.reverse();
-               const res = [];
-               let i = 0;
-               for (const msg of generalMessages) {
-                  delete msg._id;
-                  msg.user = msg.user[0].nickname;
-                  res.push(msg);
-                  i++;
-                  if (i === 50) break;
-               }
-               res.reverse();
-               console.log(`returning ${res.length} messages`);
-               socket.emit('channel messages', {messages: res, channel: 'GENERAL_CHANNEL'});
+                  ]).toArray().sort((a, b) => a.time - b.time).limit(50).reverse();
+            for (const msg of generalMessages) {
+               delete msg._id;
+               msg.user = msg.user[0].nickname;
+            }
+            console.log(`returning ${res.length} messages`);
+            socket.emit('channel messages', {messages: generalMessages, channel: 'GENERAL_CHANNEL'});
             });
 
             socket.on('message', async data => {
