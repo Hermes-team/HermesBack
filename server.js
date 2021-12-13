@@ -324,9 +324,10 @@ async function generateNicknameTag(db, nickname) {
             });
 
             socket.on('accept friend', async data => {
-               if (!data?.nickname || !data?.tag) return;
-
-               const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
+               // if (!data?.nickname || !data?.tag) return;
+               if(!data?.uniqid) return;
+               const friendUniqid = data.uniqid;
+               // const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
                if (socket._storage.user.uniqid === friendUniqid) {
                   return socket.emit('accept friend fail',{
                      reason: 'You can not add yourself to friends'
