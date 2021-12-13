@@ -317,21 +317,21 @@ async function generateNicknameTag(db, nickname) {
             });
 
             socket.on('add friend', async data => {
-               // if (!data?.nickname || !data?.tag) return;
-               // const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
+               if (!data?.nickname || !data?.tag) return;
+               const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
 
-               if(!data?.uniqid) return;
+               // if(!data?.uniqid) return;
                
-               if(await checkIfUserExistsInDatabase(db, data.uniqid)){
-                  return socket.emit('add friend fail', { reason: 'user not found' });
-               }
-
-               const friendUniqid = data.uniqid;
-
-               // if (!friendUniqid) {
-               //    //TODO CHANGE LOGIC TO RETURN SUCCESS INSTEAD OF CHECKING NUMBER IF SOMEHOW UNIQID CAN BE 0 
+               // if(await checkIfUserExistsInDatabase(db, data.uniqid)){
                //    return socket.emit('add friend fail', { reason: 'user not found' });
                // }
+
+               // const friendUniqid = data.uniqid;
+
+               if (!friendUniqid) {
+                  //TODO CHANGE LOGIC TO RETURN SUCCESS INSTEAD OF CHECKING NUMBER IF SOMEHOW UNIQID CAN BE 0 
+                  return socket.emit('add friend fail', { reason: 'user not found' });
+               }
                if (socket._storage.user.uniqid === friendUniqid) {
                   return socket.emit('add friend fail',{ 
                      reason: 'You can not add yourself to friends'});
