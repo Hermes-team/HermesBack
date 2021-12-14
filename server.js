@@ -308,8 +308,6 @@ async function generateNicknameTag(db, nickname) {
             socket.emit('authenticated');
             console.log(`${socket._storage.user.email} authenticated`);
 
-            socket.join('GENERAL_CHANNEL');
-
             socket.on('get servers', async () => {
                console.log(`${socket._storage.user.nickname} requested servers`)
                const search = { members: { $in: [socket._storage.user.uniqid] } };
@@ -320,6 +318,9 @@ async function generateNicknameTag(db, nickname) {
                   id: 'GENERAL_SERVER'
                };
                servers.unshift(generalServer)
+               for (const server of servers) {
+                  socket.join(server.id);
+               }
                socket.emit('servers', servers);
             });
 
@@ -337,12 +338,6 @@ async function generateNicknameTag(db, nickname) {
                   });
                }
                await addUserToFriendRequest(db, socket._storage.user.uniqid, friendUniqid)
-               // TODO
-               // const clients = io.sockets.clients();
-               // const friend = clients.find(e => e._storage.user.uniqid === friendUniqid);
-               // if (friend) {
-               //    friend.emit('add friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
-               // }
                socket.emit('add friend success', { success: true })
             });
 
@@ -365,12 +360,6 @@ async function generateNicknameTag(db, nickname) {
                   });
                }
                await addFriend(db, socket._storage.user.uniqid, friendUniqid)
-               // TODO
-               // const clients = io.sockets.clients();
-               // const friend = clients.find(e => e._storage.user.uniqid === friendUniqid);
-               // if (friend) {
-               //    friend.emit('accept friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
-               // }
                console.log('accept friend success');
                socket.emit('accept friend success', { success: true })
             });
@@ -446,7 +435,6 @@ async function generateNicknameTag(db, nickname) {
                console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
                const newMessage = {
                   message: data.message,
-                  channel: 'GENERAL_CHANNEL',
                   server: 'GENERAL_SERVER',
                   from: socket._storage.user.nickname,
                   time: Date.now(),
@@ -458,7 +446,7 @@ async function generateNicknameTag(db, nickname) {
                if (err) {
                   return console.error(err);
                }
-               io.to('GENERAL_CHANNEL').emit('message', newMessage);
+               io.to('GENERAL_SERVER').emit('message', newMessage);
             });
 
             socket.on('new server', async data => {
