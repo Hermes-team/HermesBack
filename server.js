@@ -308,14 +308,14 @@ async function generateNicknameTag(db, nickname) {
             socket.emit('authenticated');
             console.log(`${socket._storage.user.email} authenticated`);
 
-            socket.on('get servers', async () => {
+            socket.on('get servers', async data => {
                console.log(`${socket._storage.user.nickname} requested servers`)
                const search = { members: { $in: [socket._storage.user.uniqid] } };
                const servers = await db.collection('servers').find(search).toArray();
                const generalServer = {
                   name: 'General',
                   lastMessage: 'Yooo',
-                  id: 'GENERAL_SERVER'
+                  id: data?.server || 'GENERAL_SERVER'
                };
                servers.unshift(generalServer)
                for (const server of servers) {
