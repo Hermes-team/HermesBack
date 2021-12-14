@@ -71,9 +71,7 @@ function checkIfUserExistsInDatabase(db, uniqid) {
 
 async function addFriend(db, userUniqid, friendUniqid) {
    await db.collection('accounts').updateOne({ uniqid: userUniqid }, {
-      $pull: { pendingRequests: friendUniqid }
-   })
-   await db.collection('accounts').updateOne({ uniqid: userUniqid }, {
+      $pull: { pendingRequests: friendUniqid },
       $addToSet: { friends: friendUniqid }
    })
    await db.collection('accounts').updateOne({ uniqid: friendUniqid }, {
