@@ -220,7 +220,14 @@ async function generateNicknameTag(db, nickname) {
             console.log(err);
             return res.json({ success: false, msg: 'database error' });
          }
-         res.json({ success: true, token: token, selector: tokenSelector });
+         res.json({
+            success: true,
+            token: token,
+            selector: tokenSelector,
+            uniqid: uniqID,
+            nickname: req.body.nickname,
+            tag: nicknameTag
+         });
       });
    });
 
