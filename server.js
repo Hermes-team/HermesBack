@@ -361,7 +361,7 @@ async function generateNicknameTag(db, nickname) {
                   });
                }
 
-               const acceptedUser = await db.collection('accounts').findOne({uniqid: friendUniqid});
+               const acceptedUser = await db.collection('accounts').findOne({ uniqid: friendUniqid });
 
                if (!acceptedUser) {
                   console.log('accept friend fail user not found')
@@ -379,8 +379,8 @@ async function generateNicknameTag(db, nickname) {
                   id: uuidv4(),
                   dm: true,
                   display: [
-                     {id: socket._storage.user.uniqid, name: socket._storage.user.nickname},
-                     {id: friendUniqid, name: acceptedUser.nickname}
+                     { id: socket._storage.user.uniqid, name: socket._storage.user.nickname },
+                     { id: friendUniqid, name: acceptedUser.nickname }
                   ]
                };
                const { err } = await db.collection('servers').insertOne(newServer);
@@ -398,7 +398,7 @@ async function generateNicknameTag(db, nickname) {
                //* There should be never a case where pendingReuqest to friends or friends are not found
                //* since they are added when the user is created
 
-               const user = await db.collection('accounts').findOne({uniqid: socket._storage.user.uniqid});
+               const user = await db.collection('accounts').findOne({ uniqid: socket._storage.user.uniqid });
 
                if (!user) {
                   return socket.emit('get friends fail', { reason: 'critical error' });
@@ -427,16 +427,25 @@ async function generateNicknameTag(db, nickname) {
                let server = data.server;
                if (server !== 'GENERAL_SERVER' && server.length !== 36) {
                   console.log('redirecting get message to server');
-                  const search = { members: { $in: [
-                     socket._storage.user.uniqid, server
-                  ] }, dm: true };
+                  const search = {
+                     $and: [
+                        { dm: true },
+                        {
+                           members: {
+                              $in: [
+                                 socket._storage.user.uniqid, server
+                              ]
+                           }
+                        }
+                     ]
+                  }
                   const srv = await db.collection('servers').findOne(search)
                   if (!srv) {
                      return console.log('no server found')
                   }
                   server = srv.id;
                }
-               const messages = await db.collection('messages').find({server}, {
+               const messages = await db.collection('messages').find({ server }, {
                   _id: 0,
                   message: 1,
                   server: 1,
@@ -446,9 +455,9 @@ async function generateNicknameTag(db, nickname) {
                   userID: 1,
                   user: 1
                })
-               .sort({ _id: -1 })
-               .limit(50)
-               .toArray();
+                  .sort({ _id: -1 })
+                  .limit(50)
+                  .toArray();
                messages.reverse();
                console.log(`returning ${messages.length} messages`);
                socket.emit('channel messages', { messages, server: data.server });
@@ -461,9 +470,18 @@ async function generateNicknameTag(db, nickname) {
 
                if (server !== 'GENERAL_SERVER' && server.length !== 36) {
                   console.log('redirecting message to server');
-                  const search = { members: { $in: [
-                     socket._storage.user.uniqid, server
-                  ] }, dm: true };
+                  const search = {
+                     $and: [
+                        { dm: true },
+                        {
+                           members: {
+                              $in: [
+                                 socket._storage.user.uniqid, server
+                              ]
+                           }
+                        }
+                     ]
+                  }
                   const srv = await db.collection('servers').findOne(search)
                   if (!srv) {
                      return console.log('no server found')
@@ -493,7 +511,8 @@ async function generateNicknameTag(db, nickname) {
                   name: data.name,
                   creator: socket._storage.user.uniqid,
                   members: [socket._storage.user.uniqid],
-                  id: uuidv4()
+                  id: uuidv4(),
+                  dm: false
                };
                const { err } = await db.collection('servers').insertOne(newServer);
                if (err) {
