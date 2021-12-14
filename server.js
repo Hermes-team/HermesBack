@@ -339,17 +339,6 @@ async function generateNicknameTag(db, nickname) {
                }
                await addUserToFriendRequest(db, socket._storage.user.uniqid, friendUniqid)
 
-               const newServer = {
-                  name: `${data.nickname} & ${socket._storage.user.nickname}`,
-                  creator: socket._storage.user.uniqid,
-                  members: [socket._storage.user.uniqid, friendUniqid],
-                  id: uuidv4()
-               };
-               const { err } = await db.collection('servers').insertOne(newServer);
-               if (err) {
-                  return console.error(err);
-               }
-               socket.emit('server created', newServer);
                socket.emit('add friend success', { success: true })
             });
 
@@ -372,6 +361,19 @@ async function generateNicknameTag(db, nickname) {
                   });
                }
                await addFriend(db, socket._storage.user.uniqid, friendUniqid)
+
+               const newServer = {
+                  name: `${data.nickname} & ${socket._storage.user.nickname}`,
+                  creator: socket._storage.user.uniqid,
+                  members: [socket._storage.user.uniqid, friendUniqid],
+                  id: uuidv4()
+               };
+               const { err } = await db.collection('servers').insertOne(newServer);
+               if (err) {
+                  return console.error(err);
+               }
+               socket.emit('server created', newServer);
+
                console.log('accept friend success');
                socket.emit('accept friend success', { success: true })
             });
