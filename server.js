@@ -443,6 +443,7 @@ async function generateNicknameTag(db, nickname) {
                   if (!srv) {
                      return console.log('no server found')
                   }
+                  console.log(`redirected ${server} to ${srv.id}`)
                   server = srv.id;
                }
                const messages = await db.collection('messages').find({ server }, {
@@ -486,6 +487,7 @@ async function generateNicknameTag(db, nickname) {
                   if (!srv) {
                      return console.log('no server found')
                   }
+                  console.log(`redirected ${server} to ${srv.id}`)
                   server = srv.id;
                }
 
