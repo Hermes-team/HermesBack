@@ -89,7 +89,7 @@ async function getUserAndValidateToken(db, token, tokenSelector) {
    if (!hash.verify(token, user.token)) {
       return { success: false, reason: 'Invalid token' };
    }
-   return {success: true, user:user}
+   return { success: true, user: user }
 };
 
 async function addUserToFriendRequest(db, userRequestingUniqid, userGettingRequestUniqid) {
@@ -282,12 +282,12 @@ async function generateNicknameTag(db, nickname) {
       socket.on('disconnect', () => {
          console.log('socket disconnected');
       });
-      
+
       socket.on('authenticate', async data => {
          await socket._storage.mutex.runExclusive(async () => {
             if (socket._storage.authenticated) return;
             if (!data?.selector || !data?.token) {
-               return socket.emit('auth denied', {reason: 'invalid data'});
+               return socket.emit('auth denied', { reason: 'invalid data' });
             }
 
             const userResponse = await getUserAndValidateToken(db, data.token, data.selector)
@@ -305,7 +305,7 @@ async function generateNicknameTag(db, nickname) {
 
             socket.on('get servers', async () => {
                console.log(`${socket._storage.user.nickname} requested servers`)
-               const search = {members: {$in: [socket._storage.user.uniqid]}};
+               const search = { members: { $in: [socket._storage.user.uniqid] } };
                const servers = await db.collection('servers').find(search).toArray();
                const generalServer = {
                   name: 'General',
@@ -321,7 +321,7 @@ async function generateNicknameTag(db, nickname) {
                const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
 
                // if(!data?.uniqid) return;
-               
+
                // if(await checkIfUserExistsInDatabase(db, data.uniqid)){
                //    return socket.emit('add friend fail', { reason: 'user not found' });
                // }
@@ -333,8 +333,9 @@ async function generateNicknameTag(db, nickname) {
                   return socket.emit('add friend fail', { reason: 'user not found' });
                }
                if (socket._storage.user.uniqid === friendUniqid) {
-                  return socket.emit('add friend fail',{ 
-                     reason: 'You can not add yourself to friends'});
+                  return socket.emit('add friend fail', {
+                     reason: 'You can not add yourself to friends'
+                  });
                }
                await addUserToFriendRequest(db, socket._storage.user.uniqid, friendUniqid)
                const clients = io.sockets.clients();
@@ -346,18 +347,18 @@ async function generateNicknameTag(db, nickname) {
             });
 
             socket.on('accept friend', async data => {
-               // if (!data?.nickname || !data?.tag) return;
-               if(!data?.uniqid) return;
+               if (!data?.uniqid) return;
 
-               if(await checkIfUserExistsInDatabase(db, data.uniqid)){
+               if (await checkIfUserExistsInDatabase(db, data.uniqid)) {
+                  console.log('accept friend fail user not found');
                   return socket.emit('add friend fail', { reason: 'user not found' });
                }
 
                const friendUniqid = data.uniqid;
 
-               // const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
                if (socket._storage.user.uniqid === friendUniqid) {
-                  return socket.emit('accept friend fail',{
+                  console.log('accept friend fail cannot add yourself');
+                  return socket.emit('accept friend fail', {
                      reason: 'You can not add yourself to friends'
                   });
                }
@@ -367,6 +368,7 @@ async function generateNicknameTag(db, nickname) {
                if (friend) {
                   friend.emit('accept friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
                }
+               console.log('accept friend success');
                socket.emit('accept friend success', { success: true })
             });
 
@@ -394,7 +396,7 @@ async function generateNicknameTag(db, nickname) {
 
             socket.on('get messages', async data => {
                if (!data?.server) return;
-               const searchBy = {server: data.server};
+               const searchBy = { server: data.server };
                const generalMessages = await db
                   .collection('messages')
                   .aggregate([
@@ -425,7 +427,7 @@ async function generateNicknameTag(db, nickname) {
                         }
                      }
                   ])
-                  .sort({_id: -1})
+                  .sort({ _id: -1 })
                   .limit(50)
                   .toArray();
                generalMessages.reverse();
@@ -433,7 +435,7 @@ async function generateNicknameTag(db, nickname) {
                   msg.user = msg.user[0].nickname;
                }
                console.log(`returning ${generalMessages.length} messages`);
-               socket.emit('channel messages', {messages: generalMessages, channel: 'GENERAL_CHANNEL'});
+               socket.emit('channel messages', { messages: generalMessages, channel: 'GENERAL_CHANNEL' });
             });
 
             socket.on('message', async data => {
@@ -449,7 +451,7 @@ async function generateNicknameTag(db, nickname) {
                   userID: socket._storage.user.uniqid,
                   uuid: uuidv4()
                };
-               const {err} = await db.collection('messages').insertOne(newMessage);
+               const { err } = await db.collection('messages').insertOne(newMessage);
                if (err) {
                   return console.error(err);
                }
@@ -464,7 +466,7 @@ async function generateNicknameTag(db, nickname) {
                   members: [socket._storage.user.uniqid],
                   id: uuidv4()
                };
-               const {err} = await db.collection('servers').insertOne(newServer);
+               const { err } = await db.collection('servers').insertOne(newServer);
                if (err) {
                   return console.error(err);
                }
