@@ -436,6 +436,7 @@ async function generateNicknameTag(db, nickname) {
                .sort({ _id: -1 })
                .limit(50)
                .toArray();
+               messages.reverse();
                console.log(`returning ${messages.length} messages`);
                socket.emit('channel messages', { messages, server: data.server });
             });
