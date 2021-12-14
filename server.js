@@ -360,10 +360,20 @@ async function generateNicknameTag(db, nickname) {
                      reason: 'You can not add yourself to friends'
                   });
                }
+
+               const acceptedUser = await db.collection('accounts').findOne({uniqid: friendUniqid});
+
+               if (!acceptedUser) {
+                  console.log('accept friend fail user not found')
+                  return socket.emit('accept friend fail', {
+                     reason: 'User not found'
+                  });
+               }
+
                await addFriend(db, socket._storage.user.uniqid, friendUniqid)
 
                const newServer = {
-                  name: `${data.nickname} & ${socket._storage.user.nickname}`,
+                  name: `${acceptedUser.nickname} & ${socket._storage.user.nickname}`,
                   creator: socket._storage.user.uniqid,
                   members: [socket._storage.user.uniqid, friendUniqid],
                   id: uuidv4()
