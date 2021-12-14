@@ -381,15 +381,13 @@ async function generateNicknameTag(db, nickname) {
                //* There should be never a case where pendingReuqest to friends or friends are not found
                //* since they are added when the user is created
 
-               const user = await db.collection('accounts').find({uniqid: socket._storage.user.uniqid});
+               const user = await db.collection('accounts').findOne({uniqid: socket._storage.user.uniqid});
 
                if (!user) {
                   return socket.emit('get friends fail', { reason: 'critical error' });
                }
 
                socket._storage.user = user;
-
-               console.log('pending', user.pendingRequests)
 
                let pendingRequests = await db.collection('accounts').find({ uniqid: { $in: user.pendingRequests } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
                if (!pendingRequests) {
