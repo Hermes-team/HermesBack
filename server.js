@@ -226,7 +226,8 @@ async function generateNicknameTag(db, nickname) {
             selector: tokenSelector,
             uniqid: uniqID,
             nickname: req.body.nickname,
-            tag: nicknameTag
+            tag: nicknameTag,
+            email: req.body.email
          });
       });
    });
@@ -272,7 +273,8 @@ async function generateNicknameTag(db, nickname) {
          selector: tokenSelector,
          uniqid: user.uniqid,
          nickname: user.nickname,
-         tag: user.tag
+         tag: user.tag,
+         email: req.body.email
       });
    });
 
@@ -432,6 +434,7 @@ async function generateNicknameTag(db, nickname) {
 
             socket.on('message', async data => {
                if (!data.message) return;
+               // TODO data.server
                console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
                const newMessage = {
                   message: data.message,
