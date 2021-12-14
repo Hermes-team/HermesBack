@@ -425,7 +425,7 @@ async function generateNicknameTag(db, nickname) {
                if (!data?.server) return;
                console.log('get messages')
                let server = data.server;
-               if (server !== 'GENERAL_SERVER' && server.length === uniqid().length) {
+               if (server !== 'GENERAL_SERVER' && server.length !== 36) {
                   console.log('redirecting get message to server');
                   const search = { members: { $in: [
                      socket._storage.user.uniqid, server
@@ -459,7 +459,7 @@ async function generateNicknameTag(db, nickname) {
                let server = data?.server || 'GENERAL_SERVER';
                console.log(`${socket._storage.user.nickname} sent "${data.message}" to ${data?.server}`);
 
-               if (server !== 'GENERAL_SERVER' && server.length === uniqid().length) {
+               if (server !== 'GENERAL_SERVER' && server.length !== 36) {
                   console.log('redirecting message to server');
                   const search = { members: { $in: [
                      socket._storage.user.uniqid, server
