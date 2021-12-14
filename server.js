@@ -406,14 +406,10 @@ async function generateNicknameTag(db, nickname) {
                   return socket.emit('get friends fail', { reason: 'could not get pending requests to friends from database' });
                }
 
-               console.log(pendingRequests)
-
                let friends = await db.collection('accounts').find({ uniqid: { $in: user.friends } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
                if (!friends) {
                   return socket.emit('get friends fail', { reason: 'could not get friends from database' });
                }
-
-               console.log(friends)
 
                pendingRequests = pendingRequests.map(e => ({ uniqid: e.uniqid, nickname: e.nickname, tag: e.tag }))
                friends = friends.map(e => ({ uniqid: e.uniqid, nickname: e.nickname, tag: e.tag }))
