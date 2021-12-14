@@ -413,43 +413,21 @@ async function generateNicknameTag(db, nickname) {
             socket.on('get messages', async data => {
                if (!data?.server) return;
                const searchBy = { server: data.server };
-               const generalMessages = await db
-                  .collection('messages')
-                  .aggregate([
-                     {
-                        $match: searchBy
-                     },
-                     {
-                        $lookup: {
-                           from: 'accounts',
-                           localField: 'userID',
-                           foreignField: 'uniqid',
-                           as: 'user'
-                        }
-                     },
-                     {
-                        $project: {
-                           _id: 0,
-                           message: 1,
-                           server: 1,
-                           time: 1,
-                           timezone: 1,
-                           uuid: 1,
-                           userID: 1,
-                           user: {
-                              nickname: 1
-                           }
-                        }
-                     }
-                  ])
-                  .sort({ _id: -1 })
-                  .limit(50)
-                  .toArray();
-               for (const msg of generalMessages) {
-                  msg.user = msg.user[0].nickname;
-               }
-               console.log(`returning ${generalMessages.length} messages`);
-               socket.emit('channel messages', { messages: generalMessages, server: data.server });
+               const messages = await db.collection('messages').find(searchBy, {
+                  _id: 0,
+                  message: 1,
+                  server: 1,
+                  time: 1,
+                  timezone: 1,
+                  uuid: 1,
+                  userID: 1,
+                  user: 1
+               })
+               .sort({ _id: -1 })
+               .limit(50)
+               .toArray();
+               console.log(`returning ${messages.length} messages`);
+               socket.emit('channel messages', { messages, server: data.server });
             });
 
             socket.on('message', async data => {
@@ -459,7 +437,7 @@ async function generateNicknameTag(db, nickname) {
                const newMessage = {
                   message: data.message,
                   server: data?.server || 'GENERAL_SERVER',
-                  from: socket._storage.user.nickname,
+                  user: socket._storage.user.nickname,
                   time: Date.now(),
                   timezone: serverTimezone,
                   userID: socket._storage.user.uniqid,
