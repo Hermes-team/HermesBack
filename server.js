@@ -69,16 +69,16 @@ function checkIfUserExistsInDatabase(db, uniqid) {
    });
 }
 
-function addFriend(db, userUniqid, friendUniqid) {
-   return new Promise(resolve => {
-      db.collection('accounts').updateOne({ "uniqid": userUniqid }, {
-         $pull: { pendingRequests: friendUniqid }
-      })
-      db.collection('accounts').updateOne({ "uniqid": userUniqid }, {
-         $addToSet: { friends: friendUniqid }
-      })
-      resolve({ success: true });
-   });
+async function addFriend(db, userUniqid, friendUniqid) {
+   await db.collection('accounts').updateOne({ uniqid: userUniqid }, {
+      $pull: { pendingRequests: friendUniqid }
+   })
+   await db.collection('accounts').updateOne({ uniqid: userUniqid }, {
+      $addToSet: { friends: friendUniqid }
+   })
+   await db.collection('accounts').updateOne({ uniqid: friendUniqid }, {
+      $addToSet: { friends: userUniqid }
+   })
 }
 
 async function getUserAndValidateToken(db, token, tokenSelector) {
@@ -330,11 +330,13 @@ async function generateNicknameTag(db, nickname) {
                   });
                }
                await addUserToFriendRequest(db, socket._storage.user.uniqid, friendUniqid)
+               // TODO
                const clients = io.sockets.clients();
-               const friend = clients.find(e => e._storage.user.uniqid === friendUniqid);
-               if (friend) {
-                  friend.emit('add friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
-               }
+               console.log('clients', clients)
+               // const friend = clients.find(e => e._storage.user.uniqid === friendUniqid);
+               // if (friend) {
+               //    friend.emit('add friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
+               // }
                socket.emit('add friend success', { success: true })
             });
 
@@ -357,11 +359,13 @@ async function generateNicknameTag(db, nickname) {
                   });
                }
                await addFriend(db, socket._storage.user.uniqid, friendUniqid)
+               // TODO
                const clients = io.sockets.clients();
-               const friend = clients.find(e => e._storage.user.uniqid === friendUniqid);
-               if (friend) {
-                  friend.emit('accept friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
-               }
+               console.log('clients', clients)
+               // const friend = clients.find(e => e._storage.user.uniqid === friendUniqid);
+               // if (friend) {
+               //    friend.emit('accept friend request', { nickname: socket._storage.user.nickname, tag: socket._storage.user.tag });
+               // }
                console.log('accept friend success');
                socket.emit('accept friend success', { success: true })
             });
