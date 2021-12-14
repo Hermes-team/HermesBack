@@ -509,10 +509,14 @@ async function generateNicknameTag(db, nickname) {
 
             socket.on('new server', async data => {
                console.log(`${socket._storage.user.nickname} creates "${data.name}"`);
+               const members = [socket._storage.user.uniqid];
+               for (const member of (data?.members || [])) {
+                  members.push(member);
+               }
                const newServer = {
                   name: data.name,
                   creator: socket._storage.user.uniqid,
-                  members: [socket._storage.user.uniqid],
+                  members,
                   id: uuidv4(),
                   dm: false
                };
