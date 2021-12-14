@@ -433,7 +433,6 @@ async function generateNicknameTag(db, nickname) {
                   .sort({ _id: -1 })
                   .limit(50)
                   .toArray();
-               generalMessages.reverse();
                for (const msg of generalMessages) {
                   msg.user = msg.user[0].nickname;
                }
