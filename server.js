@@ -340,7 +340,7 @@ async function generateNicknameTag(db, nickname) {
                await addUserToFriendRequest(db, socket._storage.user.uniqid, friendUniqid)
 
                const newServer = {
-                  name: data.nickname,
+                  name: `${data.nickname} & ${socket._storage.user.nickname}`,
                   creator: socket._storage.user.uniqid,
                   members: [socket._storage.user.uniqid, friendUniqid],
                   id: uuidv4()
