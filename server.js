@@ -381,20 +381,26 @@ async function generateNicknameTag(db, nickname) {
                //* There should be never a case where pendingReuqest to friends or friends are not found
                //* since they are added when the user is created
 
-               let pendingRequests = await db.collection('accounts').find({ uniqid: { $in: socket._storage.user.pendingRequests } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
+               const user = await db.collection('accounts').find({uniqid: socket._storage.user.uniqid});
+
+               if (!user) {
+                  return socket.emit('get friends fail', { reason: 'critical error' });
+               }
+
+               socket._storage.user = user;
+
+               let pendingRequests = await db.collection('accounts').find({ uniqid: { $in: user.pendingRequests } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
                if (!pendingRequests) {
                   return socket.emit('get friends fail', { reason: 'could not get pending requests to friends from database' });
                }
 
-               let friends = await db.collection('accounts').find({ uniqid: { $in: socket._storage.user.friends } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
+               let friends = await db.collection('accounts').find({ uniqid: { $in: user.friends } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
                if (!friends) {
                   return socket.emit('get friends fail', { reason: 'could not get friends from database' });
                }
 
                pendingRequests = pendingRequests.map(e => ({ uniqid: e.uniqid, nickname: e.nickname, tag: e.tag }))
                friends = friends.map(e => ({ uniqid: e.uniqid, nickname: e.nickname, tag: e.tag }))
-               console.log(pendingRequests)
-               console.log(friends)
                return socket.emit('get friends success', { success: true, friends, pendingRequests })
             });
 
