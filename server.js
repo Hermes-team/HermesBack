@@ -343,7 +343,7 @@ async function generateNicknameTag(db, nickname) {
                console.log(`accept friend id ${data?.uniqid}`)
                if (!data?.uniqid) return;
 
-               if (await checkIfUserExistsInDatabase(db, data.uniqid)) {
+               if (!await checkIfUserExistsInDatabase(db, data.uniqid)) {
                   console.log('accept friend fail user not found');
                   return socket.emit('add friend fail', { reason: 'user not found' });
                }
