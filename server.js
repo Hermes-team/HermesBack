@@ -376,7 +376,12 @@ async function generateNicknameTag(db, nickname) {
                   name: `${acceptedUser.nickname} & ${socket._storage.user.nickname}`,
                   creator: socket._storage.user.uniqid,
                   members: [socket._storage.user.uniqid, friendUniqid],
-                  id: uuidv4()
+                  id: uuidv4(),
+                  dm: true,
+                  display: [
+                     {id: socket._storage.user.uniqid, name: socket._storage.user.nickname},
+                     {id: friendUniqid, name: acceptedUser.nickname}
+                  ]
                };
                const { err } = await db.collection('servers').insertOne(newServer);
                if (err) {
@@ -418,8 +423,20 @@ async function generateNicknameTag(db, nickname) {
 
             socket.on('get messages', async data => {
                if (!data?.server) return;
-               const searchBy = { server: data.server };
-               const messages = await db.collection('messages').find(searchBy, {
+               console.log('get messages')
+               let server = data.server;
+               if (server.length === uniqid().length) {
+                  console.log('redirecting get message to server');
+                  const search = { members: { $in: [
+                     socket._storage.user.uniqid, server
+                  ] }, dm: true };
+                  const srv = await db.collection('servers').findOne(search)
+                  if (!srv) {
+                     return console.log('no server found')
+                  }
+                  server = srv.id;
+               }
+               const messages = await db.collection('messages').find({server}, {
                   _id: 0,
                   message: 1,
                   server: 1,
@@ -439,8 +456,21 @@ async function generateNicknameTag(db, nickname) {
 
             socket.on('message', async data => {
                if (!data.message) return;
-               const server = data?.server || 'GENERAL_SERVER';
+               let server = data?.server || 'GENERAL_SERVER';
                console.log(`${socket._storage.user.nickname} sent "${data.message}" to ${data?.server}`);
+
+               if (server.length === uniqid().length) {
+                  console.log('redirecting message to server');
+                  const search = { members: { $in: [
+                     socket._storage.user.uniqid, server
+                  ] }, dm: true };
+                  const srv = await db.collection('servers').findOne(search)
+                  if (!srv) {
+                     return console.log('no server found')
+                  }
+                  server = srv.id;
+               }
+
                const newMessage = {
                   message: data.message,
                   server: server,
