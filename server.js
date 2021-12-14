@@ -432,7 +432,7 @@ async function generateNicknameTag(db, nickname) {
                         { dm: true },
                         {
                            members: {
-                              $in: [
+                              $all: [
                                  socket._storage.user.uniqid, server
                               ]
                            }
@@ -476,7 +476,7 @@ async function generateNicknameTag(db, nickname) {
                         { dm: true },
                         {
                            members: {
-                              $in: [
+                              $all: [
                                  socket._storage.user.uniqid, server
                               ]
                            }
