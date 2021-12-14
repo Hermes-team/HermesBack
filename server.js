@@ -442,11 +442,11 @@ async function generateNicknameTag(db, nickname) {
 
             socket.on('message', async data => {
                if (!data.message) return;
-               // TODO data.server
                console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
+
                const newMessage = {
                   message: data.message,
-                  server: 'GENERAL_SERVER',
+                  server: data?.server || 'GENERAL_SERVER',
                   from: socket._storage.user.nickname,
                   time: Date.now(),
                   timezone: serverTimezone,
