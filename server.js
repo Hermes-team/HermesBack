@@ -320,14 +320,6 @@ async function generateNicknameTag(db, nickname) {
                if (!data?.nickname || !data?.tag) return;
                const friendUniqid = await getUserUniqidByNicknameAndTag(db, data.nickname, data.tag)
 
-               // if(!data?.uniqid) return;
-
-               // if(await checkIfUserExistsInDatabase(db, data.uniqid)){
-               //    return socket.emit('add friend fail', { reason: 'user not found' });
-               // }
-
-               // const friendUniqid = data.uniqid;
-
                if (!friendUniqid) {
                   //TODO CHANGE LOGIC TO RETURN SUCCESS INSTEAD OF CHECKING NUMBER IF SOMEHOW UNIQID CAN BE 0 
                   return socket.emit('add friend fail', { reason: 'user not found' });
@@ -347,6 +339,7 @@ async function generateNicknameTag(db, nickname) {
             });
 
             socket.on('accept friend', async data => {
+               console.log(`accept friend by ${socket._storage.user.nickname}`)
                if (!data?.uniqid) return;
 
                if (await checkIfUserExistsInDatabase(db, data.uniqid)) {
