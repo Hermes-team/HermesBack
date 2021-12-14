@@ -439,11 +439,11 @@ async function generateNicknameTag(db, nickname) {
 
             socket.on('message', async data => {
                if (!data.message) return;
-               console.log(`${socket._storage.user.nickname} sent "${data.message}"`);
-
+               const server = data?.server || 'GENERAL_SERVER';
+               console.log(`${socket._storage.user.nickname} sent "${data.message}" to ${data?.server}`);
                const newMessage = {
                   message: data.message,
-                  server: data?.server || 'GENERAL_SERVER',
+                  server: server,
                   user: socket._storage.user.nickname,
                   time: Date.now(),
                   timezone: serverTimezone,
@@ -454,7 +454,7 @@ async function generateNicknameTag(db, nickname) {
                if (err) {
                   return console.error(err);
                }
-               io.to('GENERAL_SERVER').emit('message', newMessage);
+               io.to(server).emit('message', newMessage);
             });
 
             socket.on('new server', async data => {
