@@ -419,7 +419,6 @@ async function generateNicknameTag(db, nickname) {
                         $project: {
                            _id: 0,
                            message: 1,
-                           channel: 1,
                            server: 1,
                            time: 1,
                            timezone: 1,
@@ -439,7 +438,7 @@ async function generateNicknameTag(db, nickname) {
                   msg.user = msg.user[0].nickname;
                }
                console.log(`returning ${generalMessages.length} messages`);
-               socket.emit('channel messages', { messages: generalMessages, channel: 'GENERAL_CHANNEL' });
+               socket.emit('channel messages', { messages: generalMessages, server: data.server });
             });
 
             socket.on('message', async data => {
