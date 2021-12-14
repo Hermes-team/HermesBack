@@ -340,6 +340,7 @@ async function generateNicknameTag(db, nickname) {
 
             socket.on('accept friend', async data => {
                console.log(`accept friend by ${socket._storage.user.nickname}`)
+               console.log(`accept friend id ${data?.uniqid}`)
                if (!data?.uniqid) return;
 
                if (await checkIfUserExistsInDatabase(db, data.uniqid)) {
