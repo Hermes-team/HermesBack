@@ -389,6 +389,8 @@ async function generateNicknameTag(db, nickname) {
 
                socket._storage.user = user;
 
+               console.log('pending', user.pendingRequests)
+
                let pendingRequests = await db.collection('accounts').find({ uniqid: { $in: user.pendingRequests } }, { nickname: 1, tag: 1, _id: 0 }).toArray();
                if (!pendingRequests) {
                   return socket.emit('get friends fail', { reason: 'could not get pending requests to friends from database' });
