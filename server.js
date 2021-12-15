@@ -491,6 +491,10 @@ async function generateNicknameTag(db, nickname) {
                   server = srv.id;
                }
 
+               if(data.linkFlag){
+                  console.log("gif url", data.message);
+               }
+
                const newMessage = {
                   message: data.message,
                   server: server,
