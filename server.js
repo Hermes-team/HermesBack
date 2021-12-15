@@ -499,7 +499,7 @@ async function generateNicknameTag(db, nickname) {
                   timezone: serverTimezone,
                   userID: socket._storage.user.uniqid,
                   uuid: uuidv4(),
-                  linkFlag: data.linkFlag ? data.linkFlag : false
+                  linkFlag: !!data.linkFlag
                };
                const { err } = await db.collection('messages').insertOne(newMessage);
                if (err) {
